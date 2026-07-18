@@ -1,0 +1,27 @@
+# Keep only placeholder config files — secrets go to appsettings.Development.json (never push this file)
+**/appsettings.Development.json
+**/appsettings.*.json
+
+# Keep base appsettings.json with placeholder values
+!**/appsettings.json
+
+# Build artifacts
+**/bin/
+**/obj/
+
+# IDE
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.rsuser
+Thumbs.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep frontend folder (untracked)
+# frontend/ — add to git manually after .gitignore is set up

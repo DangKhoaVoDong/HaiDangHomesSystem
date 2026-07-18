@@ -1,0 +1,60 @@
+services:
+  - type: web
+    name: haidanghomes-api
+    region: singapore
+    plan: free
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    env:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: DATABASE_URL
+        value: ${DATABASE_URL}
+
+      - key: ConnectionStrings__DefaultConnection
+        value: ${DATABASE_URL}
+
+      - key: ConnectionStrings__Redis
+        value: ${UPSTASH_REDIS_URL}
+
+      - key: Jwt__Secret
+        sync: false
+      - key: Jwt__Issuer
+        value: HaiDangHomes
+      - key: Jwt__Audience
+        value: HaiDangHomesAPI
+      - key: Jwt__ExpiryInMinutes
+        value: "60"
+      - key: Jwt__RefreshTokenExpiryInDays
+        value: "7"
+
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+
+      - key: PayOS__ClientId
+        sync: false
+      - key: PayOS__ApiKey
+        sync: false
+      - key: PayOS__ChecksumKey
+        sync: false
+      - key: PayOS__ReturnUrl
+        sync: false
+      - key: PayOS__CancelUrl
+        sync: false
+
+      - key: Resend__ApiKey
+        sync: false
+      - key: Resend__FromEmail
+        value: noreply@yourdomain.com
+
+      - key: App__CompanyName
+        value: HaiDang Homes
+      - key: App__Url
+        sync: false

@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-outline-variant: #e2bfb5;
+  --color-tertiary-fixed-dim: #ffb3b5;
+  --color-on-secondary: #ffffff;
+  --color-secondary-fixed: #dbe2fb;
+  --color-secondary: #565e73;
+  --color-on-tertiary-fixed: #40000b;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-variant: #e5e2e1;
+  --color-surface-container-high: #ebe7e7;
+  --color-primary: #D24A15;
+  --color-on-background: #1c1b1b;
+  --color-inverse-surface: #313030;
+  --color-surface-container-highest: #e5e2e1;
+  --color-tertiary-container: #ce4252;
+  --color-secondary-container: #d8dff9;
+  --color-on-secondary-container: #5b6278;
+  --color-on-primary-fixed: #390c00;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-primary: #ffffff;
+  --color-tertiary: #ac293b;
+  --color-on-primary-fixed-variant: #832600;
+  --color-surface-container: #f0edec;
+  --color-background: #fcf9f8;
+  --color-inverse-primary: #ffb59d;
+  --color-tertiary-fixed: #ffdada;
+  --color-surface: #fcf9f8;
+  --color-error: #ba1a1a;
+  --color-surface-tint: #ac3400;
+  --color-on-error-container: #93000a;
+  --color-primary-container: #ce4711;
+  --color-secondary-fixed-dim: #bfc6df;
+  --color-on-surface: #1c1b1b;
+  --color-primary-fixed: #ffdbd0;
+  --color-on-tertiary-container: #fffbff;
+  --color-on-primary-container: #fffbff;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-tertiary: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-primary-fixed-dim: #ffb59d;
+  --color-on-secondary-fixed: #131b2e;
+  --color-on-secondary-fixed-variant: #3f465b;
+  --color-surface-dim: #dcd9d9;
+  --color-outline: #8d7168;
+  --color-on-surface-variant: #594139;
+  --color-on-tertiary-fixed-variant: #8e0f28;
+  --color-inverse-on-surface: #f3f0ef;
+
+  --spacing-stack-md: 24px;
+  --spacing-stack-sm: 12px;
+  --spacing-margin-mobile: 20px;
+  --spacing-gutter: 24px;
+  --spacing-stack-lg: 48px;
+  --spacing-base: 8px;
+  --spacing-margin-desktop: 64px;
+  --spacing-container-max: 1280px;
+
+  --font-label-sm: 'Inter', sans-serif;
+  --font-display-lg-mobile: 'Playfair Display', serif;
+  --font-headline-lg-mobile: 'Playfair Display', serif;
+  --font-body-lg: 'Inter', sans-serif;
+  --font-label-md: 'Inter', sans-serif;
+  --font-headline-lg: 'Playfair Display', serif;
+  --font-body-md: 'Inter', sans-serif;
+  --font-display-lg: 'Playfair Display', serif;
+  --font-headline-md: 'Playfair Display', serif;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #fcf9f8;
+  color: #1c1b1b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6,
+.font-display-lg,
+.font-headline-lg,
+.font-headline-md {
+  font-family: 'Playfair Display', serif;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+::selection {
+  background-color: #ce4711;
+  color: #fffbff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f6f3f2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2bfb5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d24a15;
+}
