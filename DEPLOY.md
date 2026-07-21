@@ -242,6 +242,11 @@ PayOS__CancelUrl = https://YOUR_APP_NAME.vercel.app/booking/failed
 App__Url = https://YOUR_APP_NAME.vercel.app
 ```
 
+```
+# Allowed CORS Origins
+AllowedOrigins = https://YOUR_APP_NAME.vercel.app,http://localhost:3000
+```
+
 ---
 
 ## Step 7 — Configure Next.js API Rewrite
@@ -315,7 +320,10 @@ Render will auto-rebuild and apply the migration.
 Render's free tier sleeps after 15 min of inactivity. First request after sleep takes 30-60s. This is normal.
 
 ### CORS errors
-Backend `Program.cs` must have `AllowAll()` CORS policy. Check `appsettings.json` or `Program.cs`.
+Backend `Program.cs` must have CORS policy configured. Add `AllowedOrigins` env var on Render:
+```
+AllowedOrigins = https://YOUR_APP_NAME.vercel.app,http://localhost:3000
+```
 
 ### Image upload fails
 - Check `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret` are correct
