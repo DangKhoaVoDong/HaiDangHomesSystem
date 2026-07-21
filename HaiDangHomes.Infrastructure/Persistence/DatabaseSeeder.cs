@@ -25,9 +25,7 @@ public static class DatabaseSeeder
             logger.LogWarning(ex, "DatabaseSeeder: Migrate step skipped or failed (will rely on existing schema).");
         }
 
-        var hasData = await dbContext.Categories.IgnoreQueryFilters().AnyAsync()
-                   || await dbContext.Properties.IgnoreQueryFilters().AnyAsync()
-                   || await dbContext.Users.IgnoreQueryFilters().AnyAsync();
+        var hasData = await dbContext.Users.IgnoreQueryFilters().AnyAsync();
 
         var now = DateTime.UtcNow;
 
