@@ -111,8 +111,11 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // CORS — allow frontend origins
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-    ?? new[] { "http://localhost:3000" };
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("AllowedOrigins");
+var allowedOrigins = !string.IsNullOrEmpty(allowedOriginsEnv)
+    ? allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    : builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+      ?? new[] { "http://localhost:3000" };
 
 builder.Services.AddCors(options =>
 {
