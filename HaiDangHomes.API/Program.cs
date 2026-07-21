@@ -125,11 +125,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Health Checks
-var rawConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
-var healthCheckConn = rawConn.Contains('?')
-    ? rawConn.Split('?')[0] + "?sslmode=require"
-    : rawConn;
+// Health Checks — convert URL format to Npgsql key-value format
+var healthCheckConn = ConnectionStringConverter.Convert(
+    builder.Configuration.GetConnectionString("DefaultConnection") ?? "");
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(healthCheckConn, name: "postgresql");
@@ -174,3 +172,54 @@ app.Run();
 
 // Make Program accessible for testing
 public partial class Program { }
+
+/// <summary>
+/// Converts URL-format connection string to Npgsql key-value format.
+/// </summary>
+public static class ConnectionStringConverter
+{
+    public static string Convert(string connectionString)
+    {
+        if (string.IsNullOrEmpty(connectionString)) return connectionString;
+
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(connectionString);
+                var db = uri.AbsolutePath.TrimStart('/');
+                var userInfo = uri.UserInfo.Split(':');
+                var user = userInfo[0];
+                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+
+                var sslMode = "Require";
+                if (uri.Query.Length > 1)
+                {
+                    var query = uri.Query.TrimStart('?');
+                    foreach (var param in query.Split('&'))
+                    {
+                        if (param.StartsWith("sslmode=", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var value = param.Substring("sslmode=".Length).ToLower();
+                            sslMode = value switch
+                            {
+                                "require" => "Require",
+                                "prefer" => "Prefer",
+                                "disable" => "Disable",
+                                _ => "Require"
+                            };
+                        }
+                    }
+                }
+
+                return $"Host={uri.Host};Database={db};Username={user};Password={pass};SSL Mode={sslMode}";
+            }
+            catch
+            {
+                return connectionString;
+            }
+        }
+
+        return connectionString;
+    }
+}
