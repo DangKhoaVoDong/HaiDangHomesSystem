@@ -25,6 +25,8 @@ public static class DatabaseSeeder
             logger.LogWarning(ex, "DatabaseSeeder: Migrate step skipped or failed (will rely on existing schema).");
         }
 
+        var forceReseed = Environment.GetEnvironmentVariable("FORCE_RESET_DB")?.ToLower() == "true";
+
         var hasData = await dbContext.Users.IgnoreQueryFilters().AnyAsync();
 
         var now = DateTime.UtcNow;
