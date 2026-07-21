@@ -126,9 +126,13 @@ builder.Services.AddCors(options =>
 });
 
 // Health Checks
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var rawConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
+var healthCheckConn = rawConn.Contains('?')
+    ? rawConn.Split('?')[0] + "?sslmode=require"
+    : rawConn;
+
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString ?? "", name: "postgresql");
+    .AddNpgSql(healthCheckConn, name: "postgresql");
 
 var app = builder.Build();
 

@@ -23,8 +23,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        // Database — clean connection string (remove unsupported params like channel_binding)
+        var rawConnectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
+        var connectionString = CleanConnectionString(rawConnectionString);
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsAssembly("HaiDangHomes.API")));
@@ -120,5 +122,28 @@ public static class DependencyInjection
         services.AddScoped<IBookingService, BookingService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Cleans connection string by removing unsupported parameters (e.g., channel_binding)
+    /// that Npgsql doesn't understand.
+    /// </summary>
+    private static string CleanConnectionString(string connectionString)
+    {
+        if (string.IsNullOrEmpty(connectionString)) return connectionString;
+
+        // Remove channel_binding and other unsupported query params
+        var parts = connectionString.Split('?');
+        var baseConn = parts[0];
+        var cleanParams = new List<string> { "sslmode=require" };
+
+        if (parts.Length > 1)
+        {
+            var existingParams = parts[1].Split('&')
+                .Where(p => !p.StartsWith("channel_binding", StringComparison.OrdinalIgnoreCase));
+            cleanParams.AddRange(existingParams);
+        }
+
+        return baseConn + "?" + string.Join("&", cleanParams);
     }
 }
