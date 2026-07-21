@@ -154,12 +154,14 @@ public static class DatabaseSeeder
         await dbContext.CategoryTranslations.AddRangeAsync(categoryTranslations);
 
         // ---------------- BRANDS ----------------
-        var brands = new List<Brand>
-        {
-            new() { Id = Guid.NewGuid(), Name = "HAIDANG HOMESTAYS", Description = "Thuong hieu homestay truyen thong Viet Nam",          IsActive = true, IsDeleted = false, CreatedAt = now, CreatedBy = "system" },
-            new() { Id = Guid.NewGuid(), Name = "NOVA WORD",         Description = "Thuong hieu can hoi hien dai",                       IsActive = true, IsDeleted = false, CreatedAt = now, CreatedBy = "system" }
-        };
-        await dbContext.Brands.AddRangeAsync(brands);
+        var existingBrandNames = await dbContext.Brands.IgnoreQueryFilters().Select(b => b.Name).ToListAsync();
+        var newBrands = new List<Brand>();
+        if (!existingBrandNames.Contains("HAIDANG HOMESTAYS"))
+            newBrands.Add(new() { Id = Guid.NewGuid(), Name = "HAIDANG HOMESTAYS", Description = "Thuong hieu homestay truyen thong Viet Nam", IsActive = true, IsDeleted = false, CreatedAt = now, CreatedBy = "system" });
+        if (!existingBrandNames.Contains("NOVA WORD"))
+            newBrands.Add(new() { Id = Guid.NewGuid(), Name = "NOVA WORD", Description = "Thuong hieu can hoi hien dai", IsActive = true, IsDeleted = false, CreatedAt = now, CreatedBy = "system" });
+        if (newBrands.Count > 0)
+            await dbContext.Brands.AddRangeAsync(newBrands);
 
         // ---------------- AMENITIES ----------------
         var amenityWifi      = Guid.NewGuid();
