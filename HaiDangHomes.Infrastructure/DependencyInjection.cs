@@ -125,25 +125,52 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Cleans connection string by removing unsupported parameters (e.g., channel_binding)
-    /// that Npgsql doesn't understand.
+    /// Converts URL-format connection string (postgresql://user:pass@host/db?sslmode=require)
+    /// to Npgsql key-value format (Host=...;Database=...;Username=...;Password=...;SSL Mode=Require).
     /// </summary>
     private static string CleanConnectionString(string connectionString)
     {
         if (string.IsNullOrEmpty(connectionString)) return connectionString;
 
-        // Remove channel_binding and other unsupported query params
-        var parts = connectionString.Split('?');
-        var baseConn = parts[0];
-        var cleanParams = new List<string> { "sslmode=require" };
-
-        if (parts.Length > 1)
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            var existingParams = parts[1].Split('&')
-                .Where(p => !p.StartsWith("channel_binding", StringComparison.OrdinalIgnoreCase));
-            cleanParams.AddRange(existingParams);
+            try
+            {
+                var uri = new Uri(connectionString);
+                var db = uri.AbsolutePath.TrimStart('/');
+                var userInfo = uri.UserInfo.Split(':');
+                var user = userInfo[0];
+                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+
+                // Parse sslmode from query string
+                var sslMode = "Require";
+                if (uri.Query.Length > 1)
+                {
+                    var query = uri.Query.TrimStart('?');
+                    foreach (var param in query.Split('&'))
+                    {
+                        if (param.StartsWith("sslmode=", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var value = param.Substring("sslmode=".Length).ToLower();
+                            sslMode = value switch
+                            {
+                                "require" => "Require",
+                                "prefer" => "Prefer",
+                                "disable" => "Disable",
+                                _ => "Require"
+                            };
+                        }
+                    }
+                }
+
+                return $"Host={uri.Host};Database={db};Username={user};Password={pass};SSL Mode={sslMode}";
+            }
+            catch
+            {
+                return connectionString;
+            }
         }
 
-        return baseConn + "?" + string.Join("&", cleanParams);
+        return connectionString;
     }
 }
