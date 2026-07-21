@@ -25,13 +25,13 @@ public static class DatabaseSeeder
             logger.LogWarning(ex, "DatabaseSeeder: Migrate step skipped or failed (will rely on existing schema).");
         }
 
-        var forceReseed = Environment.GetEnvironmentVariable("FORCE_RESET_DB")?.ToLower() == "true";
+        var shouldForceReseed = Environment.GetEnvironmentVariable("FORCE_RESET_DB")?.ToLower() == "true";
 
         var hasData = await dbContext.Users.IgnoreQueryFilters().AnyAsync();
 
         var now = DateTime.UtcNow;
 
-        if (hasData && !forceReseed)
+        if (hasData && !shouldForceReseed)
         {
             logger.LogInformation("DatabaseSeeder: Database already contains data — skipping seed.");
 
@@ -44,7 +44,7 @@ public static class DatabaseSeeder
 
         logger.LogInformation("DatabaseSeeder: Seeding initial data...");
 
-        if (forceReseed)
+        if (shouldForceReseed)
         {
             logger.LogWarning("DatabaseSeeder: Force reseed requested — wiping existing rows.");
             await dbContext.RoomAmenities.IgnoreQueryFilters().ExecuteDeleteAsync();
