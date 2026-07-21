@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using HaiDangHomes.Application;
 using HaiDangHomes.Application.Common;
 using HaiDangHomes.Application.Services;
@@ -182,37 +183,16 @@ public static class ConnectionStringConverter
     {
         if (string.IsNullOrEmpty(connectionString)) return connectionString;
 
-        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                var uri = new Uri(connectionString);
-                var db = uri.AbsolutePath.TrimStart('/');
-                var userInfo = uri.UserInfo.Split(':');
-                var user = userInfo[0];
-                var pass = userInfo.Length > 1 ? userInfo[1] : "";
-
-                var sslMode = "Require";
-                if (uri.Query.Length > 1)
+                var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
                 {
-                    var query = uri.Query.TrimStart('?');
-                    foreach (var param in query.Split('&'))
-                    {
-                        if (param.StartsWith("sslmode=", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var value = param.Substring("sslmode=".Length).ToLower();
-                            sslMode = value switch
-                            {
-                                "require" => "Require",
-                                "prefer" => "Prefer",
-                                "disable" => "Disable",
-                                _ => "Require"
-                            };
-                        }
-                    }
-                }
-
-                return $"Host={uri.Host};Database={db};Username={user};Password={pass};SSL Mode={sslMode}";
+                    SslMode = Npgsql.SslMode.Require
+                };
+                return builder.ConnectionString;
             }
             catch
             {
