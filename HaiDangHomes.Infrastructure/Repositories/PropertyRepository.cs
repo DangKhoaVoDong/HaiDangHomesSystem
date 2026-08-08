@@ -42,6 +42,16 @@ public class PropertyRepository : IPropertyRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<Property>> GetAllForManagementAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Properties
+            .Include(p => p.Host)
+            .Include(p => p.Category)
+            .Include(p => p.Rooms)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IEnumerable<Property>> GetFeaturedAsync(int count = 10, CancellationToken cancellationToken = default)
     {
         return await _context.Properties
@@ -103,11 +113,8 @@ public class PropertyRepository : IPropertyRepository
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // Hard-delete the property so EF cascades to its Rooms (configured
-        // with DeleteBehavior.Cascade). Soft-deleting the Property alone
-        // leaves orphan Rooms that still reference PropertyId in the DB
-        // while the global query filter hides the parent.
         var property = await _context.Properties
+            .IgnoreQueryFilters()
             .Include(p => p.Rooms)
                 .ThenInclude(r => r.Bookings)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
@@ -124,7 +131,23 @@ public class PropertyRepository : IPropertyRepository
                 "Khong the xoa can ho dang co booking dang hoat dong.");
         }
 
-        _context.Properties.Remove(property);
+        var deletedAt = DateTime.UtcNow;
+        property.IsDeleted = true;
+        property.IsActive = false;
+        property.DeletedAt = deletedAt;
+        property.UpdatedAt = deletedAt;
+
+        // Preserve the room and property rows for audit/recovery while keeping
+        // them out of every normal query through the existing global filters.
+        foreach (var room in property.Rooms)
+        {
+            room.IsDeleted = true;
+            room.IsActive = false;
+            room.IsAvailable = false;
+            room.DeletedAt = deletedAt;
+            room.UpdatedAt = deletedAt;
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
     }
 }

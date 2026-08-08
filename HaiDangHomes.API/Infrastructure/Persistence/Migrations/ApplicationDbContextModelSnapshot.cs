@@ -192,6 +192,9 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("text");
+
                     b.Property<string>("BookingCode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -290,7 +293,7 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -361,6 +364,9 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowsRooms")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -820,6 +826,9 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                     b.Property<int>("SizeInSqm")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TotalUnits")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1106,8 +1115,7 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                     b.HasOne("HaiDangHomes.Domain.Entities.User", "User")
                         .WithMany("Bookings")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Room");
 

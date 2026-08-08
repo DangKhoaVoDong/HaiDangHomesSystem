@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { amenitiesApi, propertiesApi, roomsApi, getApiData, getApiError } from '@/lib/api';
 import ImageUploadField from '@/components/ImageUploadField';
+import { useAuthStore } from '@/stores/auth';
+import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
 
 const navItems = [
   { icon: Building2, label: 'Quản lý căn nhà', active: false, href: '/manager/properties' },
@@ -47,6 +49,7 @@ interface FormState {
   bedCount: number;
   bathroomCount: number;
   sizeInSqm: number;
+  totalUnits: number;
   imageUrls: string[];
   amenityIds: string[];
 }
@@ -60,9 +63,10 @@ const BED_TYPES = [
   '3 giường đơn',
 ];
 
-export default function NewRoomPage() {
+export function CreateRoomView({ adminMode = false }: { adminMode?: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id);
 
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -75,6 +79,7 @@ export default function NewRoomPage() {
     bedCount: 1,
     bathroomCount: 1,
     sizeInSqm: 0,
+    totalUnits: 1,
     imageUrls: [],
     amenityIds: [],
   });
@@ -83,12 +88,17 @@ export default function NewRoomPage() {
   const [viewType, setViewType] = useState<string>('City view');
 
   const propertiesQuery = useQuery({
-    queryKey: ['my-properties'],
+    queryKey: ['my-properties', userId],
     queryFn: async () => {
       const res = await propertiesApi.getMyProperties();
       return getApiData(res) ?? [];
     },
   });
+
+  const eligibleProperties = useMemo(
+    () => (propertiesQuery.data ?? []).filter((property: any) => property.categoryAllowsRooms !== false),
+    [propertiesQuery.data]
+  );
 
   const amenitiesQuery = useQuery({
     queryKey: ['amenities', 'vi'],
@@ -99,10 +109,10 @@ export default function NewRoomPage() {
   });
 
   useEffect(() => {
-    if (!form.propertyId && propertiesQuery.data && propertiesQuery.data.length > 0) {
-      setForm((f) => ({ ...f, propertyId: propertiesQuery.data![0].id }));
+    if (!form.propertyId && eligibleProperties.length > 0) {
+      setForm((f) => ({ ...f, propertyId: eligibleProperties[0].id }));
     }
-  }, [propertiesQuery.data, form.propertyId]);
+  }, [eligibleProperties, form.propertyId]);
 
   const existingRoomsQuery = useQuery({
     queryKey: ['property-rooms', form.propertyId],
@@ -145,9 +155,24 @@ export default function NewRoomPage() {
         bedCount: Number(form.bedCount),
         bathroomCount: Number(form.bathroomCount),
         sizeInSqm: Number(form.sizeInSqm),
+        totalUnits: Number(form.totalUnits),
         imageUrls: form.imageUrls.length > 0 ? form.imageUrls : undefined,
         amenityIds: form.amenityIds.length > 0 ? form.amenityIds : undefined,
       });
+
+      const createdRoom = getApiData(res);
+      if (!createdRoom?.id) {
+        throw new Error(getApiError(res) || 'Máy chủ chưa xác nhận phòng đã được lưu');
+      }
+
+      // Verify through a separate read request before showing success. This
+      // prevents the UI from reporting success for data that cannot be read
+      // back from the database.
+      const persistedResponse = await roomsApi.getById(createdRoom.id);
+      if (!getApiData(persistedResponse)) {
+        throw new Error('Phòng chưa được lưu ổn định. Vui lòng thử lại.');
+      }
+
       return res;
     },
     onSuccess: (res) => {
@@ -155,8 +180,9 @@ export default function NewRoomPage() {
       if (data) {
         toast.success('Đăng tin phòng mới thành công!');
         queryClient.invalidateQueries({ queryKey: ['rooms-management'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
         queryClient.invalidateQueries({ queryKey: ['property-rooms'] });
-        router.push('/manager');
+        router.push(adminMode ? '/admin/rooms' : '/manager');
       } else {
         const errMsg = getApiError(res);
         toast.error(errMsg || 'Đăng tin phòng thất bại');
@@ -191,6 +217,11 @@ export default function NewRoomPage() {
       toast.error('Vui lòng chọn property');
       return;
     }
+    const selectedProperty = eligibleProperties.find((property: any) => property.id === form.propertyId);
+    if (!selectedProperty) {
+      toast.error('Căn nhà cho thuê nguyên căn không thể thêm phòng');
+      return;
+    }
     if (form.roomNumber <= 0) {
       toast.error('Số phòng phải lớn hơn 0');
       return;
@@ -214,7 +245,7 @@ export default function NewRoomPage() {
 
   return (
     <div className="min-h-screen bg-[#fcf9f8] flex">
-      <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50 hidden md:flex">
+      {!adminMode && <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50 hidden lg:flex">
         <div className="px-6 py-8 border-b border-gray-200">
           <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDangHomes</h1>
           <p className="text-sm text-gray-500 mt-1">Luxury Manager</p>
@@ -242,15 +273,16 @@ export default function NewRoomPage() {
             <HelpCircle className="w-5 h-5" />
             <span className="text-sm">Support</span>
           </button>
+          <ManagerLogoutButton />
         </div>
-      </aside>
+      </aside>}
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen ${adminMode ? '' : 'lg:ml-64'}`}>
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 px-6 md:px-12 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
               <Link
-                href="/manager"
+                href={adminMode ? '/admin/rooms' : '/manager'}
                 className="text-gray-500 hover:text-[#D24A15] transition-colors flex items-center gap-2 shrink-0"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -296,12 +328,17 @@ export default function NewRoomPage() {
                     <option value="">
                       {propertiesQuery.isLoading ? 'Đang tải...' : '-- Chọn property --'}
                     </option>
-                    {propertiesQuery.data?.map((p: any) => (
+                    {eligibleProperties.map((p: any) => (
                       <option key={p.id} value={p.id}>
                         {p.name} — {p.address}
                       </option>
                     ))}
                   </select>
+                  {!propertiesQuery.isLoading && eligibleProperties.length === 0 && (
+                    <p className="mt-2 text-xs text-amber-600">
+                      Không có căn nhà nào cho phép thêm phòng. Hãy kiểm tra cấu hình loại hình.
+                    </p>
+                  )}
                 </Field>
 
                 <Field label="Số phòng" required hint={`Gợi ý: ${suggestedRoomNumber}`}>
@@ -373,7 +410,15 @@ export default function NewRoomPage() {
 
             {/* ==== SECTION 2: Room Capacity & Size ==== */}
             <SectionCard title="Sức chứa & Kích thước" icon={Users}>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <CounterField
+                  label="Số lượng phòng"
+                  value={form.totalUnits}
+                  min={1}
+                  max={100}
+                  onChange={(v) => updateField('totalUnits', v)}
+                  required
+                />
                 <CounterField
                   label="Khách tối đa"
                   value={form.maxOccupancy}
@@ -583,7 +628,7 @@ export default function NewRoomPage() {
                 {createMutation.isPending ? 'Đang đăng...' : 'Đăng tin phòng'}
               </button>
               <Link
-                href="/manager"
+                href={adminMode ? '/admin/rooms' : '/manager'}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl flex items-center gap-2 transition-colors font-medium"
               >
                 Hủy
@@ -722,4 +767,8 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
       </div>
     </div>
   );
+}
+
+export default function NewRoomPage() {
+  return <CreateRoomView />;
 }

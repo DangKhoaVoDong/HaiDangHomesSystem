@@ -62,7 +62,7 @@ public static class DependencyInjection
         var cloudApiKey = configuration["Cloudinary:ApiKey"] ?? "";
         var cloudApiSecret = configuration["Cloudinary:ApiSecret"] ?? "";
 
-        if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(cloudApiKey) && !string.IsNullOrEmpty(cloudApiSecret))
+        if (IsConfigured(cloudName) && IsConfigured(cloudApiKey) && IsConfigured(cloudApiSecret))
         {
             services.AddScoped<IFileStorageService>(sp =>
                 new CloudinaryFileStorageService(cloudName, cloudApiKey, cloudApiSecret));
@@ -86,43 +86,16 @@ public static class DependencyInjection
         // QR Code
         services.AddScoped<IQrCodeService, QrCodeService>();
 
-        // PayOS Payment Gateway
-        services.AddHttpClient<PayOSPaymentService>();
-        services.AddScoped<IPaymentGatewayService>(sp =>
-        {
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-            var httpClient = httpClientFactory.CreateClient("PayOS");
-            var logger = sp.GetRequiredService<ILogger<PayOSPaymentService>>();
-            var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-
-            return new PayOSPaymentService(
-                configuration["PayOS:ClientId"] ?? "",
-                configuration["PayOS:ApiKey"] ?? "",
-                configuration["PayOS:ChecksumKey"] ?? "",
-                configuration["PayOS:ReturnUrl"] ?? "",
-                configuration["PayOS:CancelUrl"] ?? "",
-                httpClient,
-                logger,
-                unitOfWork);
-        });
-
-        // JWT Settings
-        var jwtSettings = new JwtSettings
-        {
-            Secret = configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatShouldBeAtLeast32Characters!",
-            Issuer = configuration["Jwt:Issuer"] ?? "HaiDangHomes",
-            Audience = configuration["Jwt:Audience"] ?? "HaiDangHomesAPI",
-            ExpiryInMinutes = int.Parse(configuration["Jwt:ExpiryInMinutes"] ?? "60"),
-            RefreshTokenExpiryInDays = int.Parse(configuration["Jwt:RefreshTokenExpiryInDays"] ?? "7")
-        };
-        services.AddSingleton(jwtSettings);
-
         // Application Services
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBookingService, BookingService>();
 
         return services;
     }
+
+    private static bool IsConfigured(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        !value.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Converts URL-format connection string (postgresql://user:pass@host/db?sslmode=require)

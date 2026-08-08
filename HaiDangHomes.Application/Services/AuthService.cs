@@ -193,7 +193,7 @@ public class AuthService : IAuthService
     public async Task LogoutAsync(Guid userId, string refreshToken)
     {
         var token = await _refreshTokenRepository.GetByTokenAsync(refreshToken);
-        if (token != null)
+        if (token != null && token.UserId == userId)
         {
             token.RevokedAt = DateTime.UtcNow;
             await _refreshTokenRepository.UpdateAsync(token);
@@ -243,19 +243,37 @@ public class AuthService : IAuthService
 
     private static string GenerateOtpCode()
     {
-        return new Random().Next(100000, 999999).ToString();
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 
     private static string HashPassword(string password)
     {
-        using var sha256 = SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
+        const int iterations = 210_000;
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            password, salt, iterations, HashAlgorithmName.SHA256, 32);
+        return $"PBKDF2-SHA256${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
     private static bool VerifyPassword(string password, string hash)
     {
-        return HashPassword(password) == hash;
+        var parts = hash.Split('$');
+        if (parts.Length == 4 &&
+            parts[0] == "PBKDF2-SHA256" &&
+            int.TryParse(parts[1], out var iterations))
+        {
+            var salt = Convert.FromBase64String(parts[2]);
+            var expected = Convert.FromBase64String(parts[3]);
+            var actual = Rfc2898DeriveBytes.Pbkdf2(
+                password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
+            return CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+
+        // Backward compatibility for existing SHA-256 hashes. New registrations
+        // and password changes always use PBKDF2.
+        var legacy = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+        return CryptographicOperations.FixedTimeEquals(
+            legacy, Convert.FromBase64String(hash));
     }
 }
 

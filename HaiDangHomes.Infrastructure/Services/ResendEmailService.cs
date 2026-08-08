@@ -20,6 +20,7 @@ public class ResendEmailService : IEmailService
         _logger = logger;
         // Dev fallback: skip Resend API call and log content locally when key is missing/invalid.
         _devMode = string.IsNullOrWhiteSpace(apiKey)
+                   || apiKey.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase)
                    || apiKey.StartsWith("re_PLACEHOLDER", StringComparison.OrdinalIgnoreCase)
                    || apiKey.Contains("YOUR_RESEND_KEY", StringComparison.OrdinalIgnoreCase);
     }
@@ -171,7 +172,8 @@ public class ResendEmailService : IEmailService
         <div class='content'>
             <p>Xin chào <strong>{toName}</strong>,</p>
             <p>Cảm ơn bạn đã đặt phòng tại {_companyName}. Yêu cầu đặt phòng của bạn đã được tiếp nhận.</p>
-            <p><span class='pending-badge'>Đang chờ thanh toán</span></p>
+            <p><span class='pending-badge'>Đang kiểm tra tình trạng phòng</span></p>
+            <p>Đội ngũ của chúng tôi đang kiểm tra phòng và sẽ phản hồi cho bạn trong thời gian sớm nhất. Đây chưa phải là xác nhận giữ phòng.</p>
 
             <div class='booking-info'>
                 <div class='info-row'>
@@ -203,13 +205,13 @@ public class ResendEmailService : IEmailService
                     <span class='info-value'>{numberOfGuests} người</span>
                 </div>
                 <div class='info-row'>
-                    <span class='info-label'>Số tiền cần thanh toán:</span>
+                    <span class='info-label'>Chi phí dự kiến:</span>
                     <span class='info-value amount'>{amount:N0} VND</span>
                 </div>
             </div>
 
-            <p><strong>Hướng dẫn thanh toán:</strong></p>
-            <p>Vui lòng thanh toán để hoàn tất đặt phòng. Bạn sẽ nhận được email xác nhận sau khi thanh toán thành công.</p>
+            <p><strong>Bước tiếp theo:</strong></p>
+            <p>Chúng tôi sẽ liên hệ qua email hoặc số điện thoại bạn đã cung cấp ngay sau khi kiểm tra tình trạng phòng.</p>
 
             <p><strong>Lưu ý:</strong></p>
             <ul>

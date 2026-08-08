@@ -73,6 +73,7 @@ export interface Room {
   bedCount: number;
   bathroomCount: number;
   sizeInSqm: number;
+  totalUnits: number;
   isActive: boolean;
   isAvailable: boolean;
   images: RoomImage[];
@@ -83,7 +84,7 @@ export interface Room {
 export interface Booking {
   id: string;
   bookingCode: string;
-  userId: string;
+  userId?: string;
   userName: string;
   userEmail?: string;
   roomId: string;
@@ -96,12 +97,13 @@ export interface Booking {
   discountAmount: number;
   finalPrice: number;
   status: BookingStatus;
-  paymentStatus: PaymentStatus;
-  qrCode?: string;
-  paidAt?: string;
   checkedInAt?: string;
   completedAt?: string;
   specialRequests?: string;
+  guestFullName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  adminNote?: string;
 }
 
 export interface BookingList {
@@ -159,7 +161,6 @@ export interface PropertyImage {
 
 // Enums
 export type BookingStatus = 'Pending' | 'Confirmed' | 'CheckedIn' | 'Completed' | 'Cancelled' | 'Refunded';
-export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Refunded';
 
 // API Response types - Match backend ApiResponse<T>
 export interface ApiResponse<T> {

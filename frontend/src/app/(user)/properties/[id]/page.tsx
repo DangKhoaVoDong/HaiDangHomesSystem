@@ -1,557 +1,138 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { propertiesApi, roomsApi, getApiData } from '@/lib/api';
-import { useLanguageStore } from '@/stores/language';
-import { BookingForm } from '@/components/BookingForm';
-import {
-  MapPin,
-  Star,
-  Wifi,
-  Car,
-  Coffee,
-  Tv,
-  Wind,
-  Users,
-  Bed,
-  Bath,
-  Maximize,
-  Calendar,
-  Check,
-  ArrowRight,
-  ChevronDown,
-  Phone,
-  Loader2,
-} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { Bed, ChevronLeft, ChevronRight, ImageIcon, MapPin, Maximize, Phone, Users, X } from 'lucide-react';
+import { getApiData, propertiesApi, roomsApi } from '@/lib/api';
+import { DateRangePicker } from '@/components/DateRangePicker';
 
-const defaultAmenityIcons = [Wifi, Coffee, Wind, Bath, Tv, Car, Users, Check];
+const orange = '#df4914';
+const today = new Date().toISOString().slice(0, 10);
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
 export default function PropertyDetailPage() {
-  const params = useParams();
-  const propertyId = params.id as string;
-  const { language } = useLanguageStore();
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [checkIn, setCheckIn] = useState(today);
+  const [checkOut, setCheckOut] = useState(tomorrow);
+  const [guests, setGuests] = useState(2);
+  const [roomModal, setRoomModal] = useState<any>(null);
+  const [imageIndex, setImageIndex] = useState(0);
 
-  const { data: property, isLoading } = useQuery({
-    queryKey: ['property', propertyId, language],
-    queryFn: () => propertiesApi.getById(propertyId, { language }),
+  const propertyQuery = useQuery({ queryKey: ['property', id], queryFn: () => propertiesApi.getById(id, { language: 'vi' }) });
+  const roomsQuery = useQuery({ queryKey: ['property-rooms', id], queryFn: () => roomsApi.getByPropertyId(id, { language: 'vi' }) });
+  const property: any = getApiData(propertyQuery.data);
+  const roomSummaries: any[] = getApiData(roomsQuery.data) ?? [];
+  const rooms: any[] = (property?.rooms?.length ? property.rooms : roomSummaries).map((room: any) => ({
+    ...roomSummaries.find((item: any) => item.id === room.id),
+    ...room,
+  }));
+
+  const availability = useQueries({
+    queries: rooms.map(room => ({
+      queryKey: ['availability', room.id, checkIn, checkOut],
+      queryFn: async () => Boolean(getApiData(await roomsApi.checkAvailability({ roomId: room.id, checkIn, checkOut }))),
+      enabled: Boolean(checkIn && checkOut && checkOut > checkIn),
+    })),
   });
 
-  const { data: rooms } = useQuery({
-    queryKey: ['rooms', propertyId, language],
-    queryFn: () => roomsApi.getByPropertyId(propertyId, { language }),
+  const relatedQuery = useQuery({
+    queryKey: ['related-properties', property?.city],
+    queryFn: () => propertiesApi.search({ city: property.city, page: 1, pageSize: 5, language: 'vi' }),
+    enabled: Boolean(property?.city),
   });
+  const related = ((getApiData(relatedQuery.data) as any)?.items ?? []).filter((p: any) => p.id !== id).slice(0, 4);
 
-  const propertyData = getApiData(property) as any;
-  const roomList: any[] = getApiData(rooms) || [];
+  const gallery = useMemo(() => {
+    const images = [property?.thumbnailUrl, ...(property?.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean);
+    return [...new Set(images)] as string[];
+  }, [property]);
+  const roomImages = roomModal ? [roomModal.primaryImageUrl, ...(roomModal.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean) : [];
 
-  const amenityList: { name: string; id?: string }[] = (propertyData?.amenities ?? []).map(
-    (a: any) => ({ name: a.name, id: a.id })
-  );
-  while (amenityList.length > 0 && amenityList.length < 4) {
-    amenityList.push({ name: 'Dọn phòng hàng ngày' });
-  }
-
-  const categoryName: string = (propertyData?.categoryName ?? '').toString();
-  const isApartment = /c[aă]n\s*h[oộ]|apartment/i.test(categoryName);
-  const allowRoomSelection = !isApartment;
-
-  const allImages: string[] = [];
-  if (propertyData?.thumbnailUrl) allImages.push(propertyData.thumbnailUrl);
-  if (Array.isArray(propertyData?.images)) {
-    propertyData.images.forEach((img: any) => {
-      if (img?.imageUrl && !allImages.includes(img.imageUrl)) allImages.push(img.imageUrl);
-    });
-  }
-  if (allImages.length === 0) {
-    allImages.push('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80');
-  }
-
-  const roomListSafe: any[] = useMemo(
-    () => (roomList.length > 0 ? roomList : (propertyData?.rooms ?? [])),
-    [roomList, propertyData]
-  );
-  const defaultRoom = roomListSafe[0];
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
-    defaultRoom?.id ?? null
-  );
-  useEffect(() => {
-    if (!selectedRoomId && defaultRoom?.id) {
-      setSelectedRoomId(defaultRoom.id);
-    }
-  }, [defaultRoom, selectedRoomId]);
-
-  const selectedRoom: any = useMemo(
-    () => roomListSafe.find((r: any) => r.id === selectedRoomId) ?? defaultRoom,
-    [roomListSafe, selectedRoomId, defaultRoom]
-  );
-
-  const headerGallery: string[] = useMemo(() => {
-    if (selectedRoom && Array.isArray(selectedRoom.images) && selectedRoom.images.length > 0) {
-      const urls = selectedRoom.images
-        .map((img: any) => img?.imageUrl)
-        .filter((u: any): u is string => typeof u === 'string' && u.length > 0);
-      if (urls.length > 0) {
-        return [selectedRoom.primaryImageUrl, ...urls].filter(
-          (u, i, arr) => typeof u === 'string' && u.length > 0 && arr.indexOf(u) === i
-        );
-      }
-    }
-    return allImages;
-  }, [selectedRoom, allImages]);
-  const [mainImage, ...restImages] = headerGallery;
-
-  const topRef = useRef<HTMLDivElement>(null);
-  const scrollToGallery = () => {
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const goBooking = (room: any) => {
+    const query = new URLSearchParams({ propertyId: id, checkIn, checkOut, guests: String(guests) });
+    router.push(`/booking/${room.id}?${query}`);
   };
 
-  const activeRoom = selectedRoom;
-  const minPrice = activeRoom?.pricePerNight ?? propertyData?.rooms?.[0]?.pricePerNight ?? null;
-  const maxOccupancy = activeRoom?.maxOccupancy ?? propertyData?.totalRooms ?? 2;
-  const sizeInSqm = activeRoom?.sizeInSqm ?? null;
-  const beds = activeRoom?.bedCount ?? null;
-  const bathrooms = activeRoom?.bathroomCount ?? null;
-  const roomName = activeRoom?.name ?? propertyData?.name ?? '';
+  if (propertyQuery.isLoading) return <div className="min-h-screen grid place-items-center">Đang tải thông tin chỗ nghỉ...</div>;
+  if (!property) return <div className="min-h-screen grid place-items-center">Không tìm thấy chỗ nghỉ.</div>;
 
-  const translations = {
-    vi: {
-      description: 'Mô tả',
-      amenities: 'Tiện ích',
-      rooms: 'Các loại phòng',
-      selectRoom: 'Chọn phòng',
-      viewAll: 'Xem tất cả',
-      guests: 'Khách',
-      beds: 'Giường',
-      baths: 'Phòng tắm',
-      size: 'Diện tích',
-      perNight: '/đêm',
-      reviews: 'Đánh giá',
-      aboutProperty: 'Về cơ sở lưu trú',
-      location: 'Vị trí',
-      highlights: 'Điểm nhấn',
-      policies: 'Chính sách',
-      bookNow: 'Đặt ngay',
-    },
-    en: {
-      description: 'Description',
-      amenities: 'Amenities',
-      rooms: 'Room Types',
-      selectRoom: 'Select Room',
-      viewAll: 'View all',
-      guests: 'Guests',
-      beds: 'Beds',
-      baths: 'Baths',
-      size: 'Size',
-      perNight: '/night',
-      reviews: 'Reviews',
-      aboutProperty: 'About Property',
-      location: 'Location',
-      highlights: 'Highlights',
-      policies: 'Policies',
-      bookNow: 'Book Now',
-    },
-  };
+  return <main className="min-h-screen bg-[#f7f7f7] text-[#171717]">
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-7 sm:px-8 lg:px-12 xl:px-16">
+      <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <Link href="/" className="underline">Trang chủ</Link><span>›</span>
+        <Link href="/properties" className="underline">Tìm phòng</Link><span>›</span>
+        <span className="font-medium">{property.name}</span>
+      </nav>
 
-  const t = translations[language];
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#fcf9f8]">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="bg-gray-200 h-96 rounded-lg mb-8" />
-            <div className="bg-gray-200 h-8 w-1/2 rounded mb-4" />
-            <div className="bg-gray-200 h-4 w-1/4 rounded mb-8" />
-          </div>
+      <section className="grid h-[410px] grid-cols-1 gap-1 overflow-hidden rounded-lg md:grid-cols-2">
+        <img src={gallery[0]} alt={property.name} className="h-full w-full object-cover" />
+        <div className="hidden grid-cols-2 gap-1 md:grid">
+          {[1,2,3,4].map((n) => <div className="relative overflow-hidden" key={n}>
+            <img src={gallery[n] ?? gallery[0]} alt="" className="h-full w-full object-cover" />
+            {n === 4 && <span className="absolute bottom-3 right-3 rounded bg-black/70 px-2 py-1 text-sm text-white"><ImageIcon className="mr-1 inline h-4 w-4" />{gallery.length} ảnh</span>}
+          </div>)}
         </div>
+      </section>
+
+      <div className="sticky top-0 z-20 flex gap-10 border-b bg-white px-6 shadow-sm">
+        <a href="#intro" className="border-b-2 px-1 py-4 font-semibold" style={{borderColor: orange}}>Giới thiệu</a>
+        <a href="#rooms" className="px-1 py-4">Chọn phòng</a>
       </div>
-    );
-  }
 
-  if (!propertyData) {
-    return (
-      <div className="min-h-screen bg-[#fcf9f8] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Không tìm thấy cơ sở lưu trú.</p>
-          <Link href="/properties" className="text-[#D24A15] hover:underline mt-2 inline-block">
-            ← Quay lại danh sách
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#fcf9f8]" ref={topRef}>
-      <main className="max-w-7xl mx-auto px-4 md:px-16 py-12">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-8 uppercase tracking-wider">
-          <Link href="/properties" className="flex items-center gap-1 hover:text-[#D24A15] transition-colors">
-            <ArrowRight className="w-4 h-4 rotate-180" />
-            Quay Lại
-          </Link>
-          <span className="text-gray-300">/</span>
-          <span className="text-gray-900 font-semibold truncate">{propertyData.name}</span>
-        </div>
-
-        {/* Header Info */}
-        <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">
-              {(propertyData.city || '').toString().toUpperCase()} · {propertyData.name}
-              {isApartment && (
-                <span className="ml-2 inline-block px-2 py-0.5 bg-[#f6f3f2] text-[#D24A15] text-[10px] font-bold rounded">
-                  CĂN HỘ
-                </span>
-              )}
-            </p>
-            <h1 className="font-serif text-4xl md:text-5xl text-gray-900 mb-4">
-              {allowRoomSelection ? (roomName || propertyData.name) : propertyData.name}
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl line-clamp-3">
-              {propertyData.description || 'Cơ sở lưu trú cao cấp từ Haidang Homes.'}
-            </p>
+      <section id="intro" className="grid gap-8 rounded-b-2xl bg-white p-6 md:grid-cols-[1fr_400px]">
+        <div>
+          <h1 className="mb-4 text-3xl font-semibold leading-tight sm:text-5xl">{property.name}</h1>
+          <p className="whitespace-pre-line leading-7 text-gray-700">{property.description || 'Không gian nghỉ dưỡng tiện nghi thuộc hệ thống HaiDang Homes.'}</p>
+          <h2 className="mb-4 mt-8 text-2xl font-semibold">Tiện nghi</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {(property.amenities ?? []).map((a: any) => <div key={a.id} className="rounded-lg bg-orange-50 p-3 text-sm">✓ {a.name}</div>)}
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-1 mb-1">
-              <Star className="w-4 h-4 fill-[#D24A15] text-[#D24A15]" />
-              <span className="font-bold text-gray-900">9.4</span>
-              <span className="text-gray-500 text-sm">/ 10 · {t.reviews}</span>
-            </div>
-            <div className="flex items-center justify-end gap-1 text-gray-500 text-sm">
-              <MapPin className="w-4 h-4" />
-              <span>{propertyData.address}</span>
+        </div>
+        <div>
+          <iframe title="Vị trí" className="h-64 w-full rounded-lg border-0" loading="lazy" src={`https://www.google.com/maps?q=${encodeURIComponent(`${property.address}, ${property.city ?? ''}`)}&output=embed`} />
+          <a className="mt-3 flex items-start gap-2 text-gray-700 hover:underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.address}, ${property.city ?? ''}`)}`}><MapPin className="mt-0.5 h-5 w-5 shrink-0" />{property.address}, {property.city}</a>
+        </div>
+      </section>
+
+      <section id="rooms" className="scroll-mt-20 py-10">
+        <h2 className="mb-5 text-3xl font-semibold">Lựa chọn phòng</h2>
+        <div className="relative z-40 mb-7 overflow-visible rounded-xl border border-gray-100 bg-white shadow-[0_3px_14px_rgba(0,0,0,0.05)]">
+          <div className="grid grid-cols-2 md:grid-cols-[1fr_1fr_.7fr_auto] md:items-stretch">
+            <DateRangePicker checkIn={checkIn} checkOut={checkOut} onChange={(start,end)=>{setCheckIn(start);setCheckOut(end)}} />
+            <label className="min-w-0 border-l border-t border-gray-100 px-5 py-4 md:border-t-0 md:border-gray-200">
+              <span className="block text-xs font-medium text-orange-600">Khách</span>
+              <span className="mt-1 flex items-center gap-1 text-sm font-medium text-gray-900">
+                <input aria-label="Số khách" className="w-9 border-0 bg-transparent p-0 font-semibold outline-none" type="number" min={1} value={guests} onChange={e => setGuests(Math.max(1, Number(e.target.value)))} /> khách
+              </span>
+            </label>
+            <div className="col-span-2 p-3 md:col-span-1 md:px-4">
+              <button className="w-full rounded-full border border-orange-600 px-8 py-3 text-sm font-medium text-orange-600 transition-all hover:bg-orange-600 hover:text-white active:scale-[0.98] md:min-w-[108px]">Áp dụng</button>
             </div>
           </div>
         </div>
+        {guests > 8 && <div className="mb-5 flex items-start justify-between rounded-xl border border-orange-200 bg-orange-50 p-4"><p><Phone className="mr-2 inline h-5 w-5" />Bạn muốn đặt nhiều phòng? Liên hệ <a className="font-bold underline" href="tel:0938453798">0938453798</a> để nhận thêm ưu đãi.</p><button onClick={(e) => e.currentTarget.parentElement?.remove()} className="ml-3">×</button></div>}
 
-        {/* Image Gallery (Asymmetric) */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-12 h-auto md:h-[600px]">
-          <div className="md:col-span-8 relative h-[400px] md:h-full rounded-xl overflow-hidden group bg-gray-100">
-            <img
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              src={mainImage}
-              alt={propertyData.name}
-            />
-            <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-gray-700">
-              1 / {allImages.length}
-            </div>
-          </div>
-
-          <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-1 md:grid-rows-2 gap-6 h-[400px] md:h-full">
-            {restImages.slice(0, 4).map((img, idx) => (
-              <div key={idx} className="rounded-xl overflow-hidden relative bg-gray-100">
-                <img className="w-full h-full object-cover" src={img} alt={`View ${idx + 2}`} />
+        <div className="space-y-6">
+          {rooms.map((room, index) => {
+            const available = availability[index]?.data !== false && room.isAvailable !== false;
+            return <article key={room.id} onClick={() => {setRoomModal(room);setImageIndex(0)}} className="cursor-pointer rounded-2xl bg-white p-5 shadow-sm transition hover:shadow-md">
+              <h3 className="mb-4 text-xl font-semibold">{room.name}</h3>
+              <div className="grid gap-5 md:grid-cols-[290px_1fr_180px]">
+                <img src={room.primaryImageUrl || room.images?.[0]?.imageUrl || gallery[0]} alt={room.name} className="h-52 w-full rounded-xl object-cover" />
+                <div><div className="mb-3 flex flex-wrap gap-6 text-gray-600"><span><Maximize className="mr-1 inline h-5 w-5 text-orange-500" />{room.sizeInSqm ?? '—'} m²</span><span><Bed className="mr-1 inline h-5 w-5 text-orange-500" />{room.bedCount} giường</span><span><Users className="mr-1 inline h-5 w-5 text-orange-500" />{room.maxOccupancy} người</span></div><p className="line-clamp-3 text-sm leading-6 text-gray-700">{room.description}</p><button className="mt-7 text-sm font-semibold text-orange-600">Xem chi tiết phòng</button></div>
+                <div className="flex flex-col items-end justify-end text-right"><strong className="text-2xl text-orange-600">{Number(room.pricePerNight).toLocaleString('vi-VN')}</strong><span className="text-sm">Đồng / Đêm</span><button disabled={!available} onClick={e => {e.stopPropagation(); if (available) goBooking(room)}} className="mt-6 rounded-full px-7 py-3 font-semibold text-white disabled:bg-gray-300" style={{backgroundColor: available ? orange : undefined}}>{available ? 'Chọn phòng' : 'Hết phòng'}</button></div>
               </div>
-            ))}
-            {restImages.length === 0 && (
-              <div className="rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center text-gray-400 text-sm col-span-2 md:col-span-1">
-                Chưa có thêm hình ảnh
-              </div>
-            )}
-          </div>
+            </article>;
+          })}
         </div>
+      </section>
 
-        {/* Quick Specs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8 border-y border-gray-200 mb-12">
-          <div className="flex items-start gap-3">
-            <Maximize className="w-5 h-5 text-[#D24A15] mt-1" />
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.size}</p>
-              <p className="font-semibold text-gray-900">{sizeInSqm ? `${sizeInSqm} m²` : '—'}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Bed className="w-5 h-5 text-[#D24A15] mt-1" />
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.beds}</p>
-              <p className="font-semibold text-gray-900">{beds ?? '—'} giường</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Users className="w-5 h-5 text-[#D24A15] mt-1" />
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.guests}</p>
-              <p className="font-semibold text-gray-900">{maxOccupancy} người</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Bath className="w-5 h-5 text-[#D24A15] mt-1" />
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.baths}</p>
-              <p className="font-semibold text-gray-900">{bathrooms ?? '—'} phòng tắm</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Left Column: Details */}
-          <div className="lg:col-span-8 space-y-12">
-            {/* Intro Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-4 h-[1px] bg-gray-300" />
-                <h2 className="text-xs uppercase tracking-widest text-gray-500">Giới Thiệu</h2>
-              </div>
-              <h3 className="font-serif text-2xl text-[#D24A15] mb-6">
-                {propertyData.description?.split('.')[0] || 'Không gian lưu trú cao cấp'}
-              </h3>
-              <div className="space-y-4 text-gray-600">
-                {propertyData.description ? (
-                  propertyData.description
-                    .split('.')
-                    .filter((s: string) => s.trim().length > 0)
-                    .map((para: string, idx: number) => (
-                      <p key={idx}>{para.trim()}.</p>
-                    ))
-                ) : (
-                  <p>
-                    Cơ sở lưu trú này thuộc hệ thống Haidang Homes với đầy đủ tiện nghi hiện đại,
-                    phục vụ 24/7 và không gian sang trọng.
-                  </p>
-                )}
-              </div>
-            </section>
-
-            <hr className="border-gray-200" />
-
-            {/* Highlights Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-4 h-[1px] bg-gray-300" />
-                <h2 className="text-xs uppercase tracking-widest text-gray-500">Điểm Nhấn</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  `${propertyData.totalRooms ?? 0} phòng tiện nghi hiện đại`,
-                  `${propertyData.categoryName ?? 'Phòng cao cấp'}`,
-                  propertyData.city ? `Vị trí trung tâm ${propertyData.city}` : 'Vị trí thuận tiện',
-                  'Phục vụ 24/7 & dọn phòng hàng ngày',
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <span className="text-[#D24A15] mt-1">●</span>
-                    <span className="text-gray-900">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <hr className="border-gray-200" />
-
-            {/* Amenities Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-4 h-[1px] bg-gray-300" />
-                <h2 className="text-xs uppercase tracking-widest text-gray-500">Tiện Nghi Của Cơ Sở</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(amenityList.length > 0
-                  ? amenityList
-                  : defaultAmenityIcons.map((Ico, idx) => ({ name: ['Wi-Fi', 'Cà phê', 'Điều hòa', 'Bồn tắm'][idx] }))
-                )
-                  .slice(0, 8)
-                  .map((amenity, index) => {
-                    const Icon = defaultAmenityIcons[index % defaultAmenityIcons.length];
-                    return (
-                      <div
-                        key={`${amenity.name}-${index}`}
-                        className="bg-[#f6f3f2] p-4 rounded-xl flex flex-col items-start gap-3"
-                      >
-                        <Icon className="w-5 h-5 text-[#D24A15]" />
-                        <span className="text-sm font-semibold text-gray-900">{amenity.name}</span>
-                      </div>
-                    );
-                  })}
-              </div>
-            </section>
-
-            <hr className="border-gray-200" />
-
-            {/* Policies Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-4 h-[1px] bg-gray-300" />
-                <h2 className="text-xs uppercase tracking-widest text-gray-500">Chính Sách</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="border-l-2 border-[#D24A15] pl-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Nhận Phòng</p>
-                  <p className="font-semibold text-gray-900">Từ 14:00</p>
-                </div>
-                <div className="border-l-2 border-[#D24A15] pl-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trả Phòng</p>
-                  <p className="font-semibold text-gray-900">Trước 12:00</p>
-                </div>
-                <div className="border-l-2 border-[#D24A15] pl-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Hủy Miễn Phí</p>
-                  <p className="font-semibold text-gray-900">Trước 48 giờ</p>
-                </div>
-                <div className="border-l-2 border-[#D24A15] pl-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trẻ Em</p>
-                  <p className="font-semibold text-gray-900">Miễn phí dưới 6 tuổi</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Room Types Section — hidden for Apartments */}
-            {allowRoomSelection && (
-            <section className="bg-white rounded-2xl p-6">
-              <h2 className="font-serif text-2xl text-gray-900 mb-6">Các Loại Phòng</h2>
-              <div className="space-y-4">
-                {roomListSafe.length > 0 ? (
-                  roomListSafe.map((room: any) => {
-                    const isSelected = room.id === selectedRoomId;
-                    return (
-                    <div
-                      key={room.id}
-                      className={`border rounded-xl p-4 flex gap-4 transition-all ${
-                        isSelected
-                          ? 'border-[#D24A15] ring-2 ring-[#D24A15]/20'
-                          : 'border-gray-100 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                        {room.primaryImageUrl ? (
-                          <img
-                            src={room.primaryImageUrl}
-                            alt={room.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#f6f3f2]">
-                            <Bed className="w-8 h-8 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-gray-900 mb-2">{room.name}</h3>
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
-                            {room.maxOccupancy} {t.guests}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-4 h-4" />
-                            {room.bedCount} {t.beds}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Bath className="w-4 h-4" />
-                            {room.bathroomCount} {t.baths}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Maximize className="w-4 h-4" />
-                            {room.sizeInSqm}m²
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div>
-                            <span className="text-xl font-bold text-[#D24A15]">
-                              {room.pricePerNight?.toLocaleString()} VND
-                            </span>
-                            <span className="text-gray-500 text-sm"> {t.perNight}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedRoomId(room.id);
-                              scrollToGallery();
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                              isSelected
-                                ? 'bg-white border border-[#D24A15] text-[#D24A15]'
-                                : 'bg-[#D24A15] text-white hover:bg-[#b03d10]'
-                            }`}
-                          >
-                            {isSelected ? '✓ Đã chọn' : t.selectRoom}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                  })
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <Loader2 className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                    <p>Đang tải danh sách phòng...</p>
-                  </div>
-                )}
-              </div>
-            </section>
-            )}
-          </div>
-
-          {/* Right Column: Sticky Booking Card */}
-          <div className="lg:col-span-4">
-            <div className="sticky top-28">
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-6">
-                <div className="mb-6 border-b border-gray-200 pb-6">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="font-serif text-2xl text-[#D24A15] font-bold">
-                      {minPrice != null
-                        ? `${Number(minPrice).toLocaleString('vi-VN')}`
-                        : 'Liên hệ'}
-                    </span>
-                    {minPrice != null && (
-                      <span className="text-sm text-gray-500">VND / {t.perNight}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Giá thấp nhất - đã bao gồm thuế & phí
-                  </p>
-                  {propertyData.isFeatured && (
-                    <div className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                      ĐANG ĐƯỢC YÊU THÍCH
-                    </div>
-                  )}
-                </div>
-
-                {activeRoom?.id ? (
-                  <BookingForm
-                    roomId={activeRoom.id}
-                    roomName={roomName || propertyData.name}
-                    propertyName={propertyData.name}
-                    pricePerNight={minPrice ?? 0}
-                    maxOccupancy={maxOccupancy}
-                  />
-                ) : (
-                  <div className="bg-[#f6f3f2] rounded-xl p-5 text-center">
-                    <Phone className="w-6 h-6 mx-auto text-[#D24A15] mb-2" />
-                    <p className="text-sm font-semibold text-gray-900 mb-1">
-                      {isApartment ? 'Đặt căn hộ trực tiếp' : 'Vui lòng liên hệ để đặt phòng'}
-                    </p>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Cho thuê nguyên căn — liên hệ hotline để được báo giá & sắp xếp.
-                    </p>
-                    <a
-                      href="tel:19001234"
-                      className="inline-block w-full bg-[#D24A15] text-white py-2 rounded-full font-medium text-sm hover:bg-[#b03d10] transition-colors"
-                    >
-                      Gọi 1900 1234
-                    </a>
-                  </div>
-                )}
-
-                <div className="text-center text-sm text-gray-500 flex items-center justify-center gap-1 mt-4">
-                  <Check className="w-4 h-4 text-[#D24A15]" />
-                  Hủy miễn phí trước 48 giờ
-                </div>
-              </div>
-
-              <div className="bg-[#f6f3f2] rounded-xl p-4 flex flex-col gap-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">Ưu Đãi Hội Viên</h4>
-                <p className="text-sm text-gray-600">
-                  Đăng ký miễn phí để giảm thêm 10% và nhận trả phòng muộn đến 16:00.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+      {related.length > 0 && <section className="pb-12"><h2 className="mb-6 text-3xl font-semibold">Các chỗ nghỉ khác tại {property.city}</h2><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{related.map((p:any)=><Link href={`/properties/${p.id}`} key={p.id} className="overflow-hidden rounded-xl bg-white shadow-sm"><img src={p.thumbnailUrl} alt={p.name} className="h-44 w-full object-cover"/><div className="p-4"><h3 className="font-semibold">{p.name}</h3><p className="mt-2 line-clamp-2 text-sm text-gray-600">{p.address}</p><p className="mt-4 font-bold text-orange-600">{p.minPrice ? `Từ ${Number(p.minPrice).toLocaleString('vi-VN')}đ` : 'Liên hệ'}</p></div></Link>)}</div></section>}
     </div>
-  );
+
+    {roomModal && <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-0 sm:p-5" onClick={() => setRoomModal(null)}><div className="relative grid h-full w-full max-w-5xl overflow-hidden bg-white sm:h-auto sm:max-h-[90vh] sm:rounded-2xl md:grid-cols-[1.5fr_1fr]" onClick={e=>e.stopPropagation()}><button className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow" onClick={()=>setRoomModal(null)}><X/></button><div className="flex min-h-[340px] flex-col bg-black"><div className="relative flex-1"><img src={roomImages[imageIndex] || gallery[0]} className="h-full w-full object-cover" alt=""/><button onClick={()=>setImageIndex((imageIndex-1+roomImages.length)%roomImages.length)} className="absolute left-3 top-1/2 rounded-full bg-white p-2"><ChevronLeft/></button><button onClick={()=>setImageIndex((imageIndex+1)%roomImages.length)} className="absolute right-3 top-1/2 rounded-full bg-white p-2"><ChevronRight/></button></div><div className="flex gap-2 overflow-x-auto p-3">{roomImages.map((img:string,i:number)=><img key={img} onClick={()=>setImageIndex(i)} src={img} className={`h-16 w-24 shrink-0 rounded object-cover ${i===imageIndex?'ring-2 ring-orange-500':'opacity-60'}`} alt=""/>)}</div></div><div className="flex flex-col overflow-y-auto p-6"><h2 className="pr-8 text-2xl font-semibold">{roomModal.name}</h2><p className="my-5 text-sm leading-6 text-gray-700">{roomModal.description}</p><div className="space-y-3 border-y py-5"><p><Maximize className="mr-2 inline text-orange-500"/> {roomModal.sizeInSqm} m²</p><p><Bed className="mr-2 inline text-orange-500"/> {roomModal.bedCount} giường</p><p><Users className="mr-2 inline text-orange-500"/> {roomModal.maxOccupancy} người</p></div><h3 className="mt-5 font-semibold">Tiện nghi</h3><div className="mt-3 space-y-2 text-sm">{(roomModal.amenities ?? []).map((a:any)=><p key={a.id}>✓ {a.name}</p>)}</div><div className="mt-auto border-t pt-5"><strong className="text-2xl text-orange-600">{Number(roomModal.pricePerNight).toLocaleString('vi-VN')}đ</strong><span> / đêm</span><button onClick={()=>goBooking(roomModal)} className="mt-4 w-full rounded-full bg-orange-600 py-3 font-semibold text-white">Chọn phòng</button></div></div></div></div>}
+  </main>;
 }

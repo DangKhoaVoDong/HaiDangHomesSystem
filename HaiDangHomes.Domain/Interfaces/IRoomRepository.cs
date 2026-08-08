@@ -16,6 +16,8 @@ public interface IRoomRepository
 
     // Manager specific methods
     Task<List<Room>> GetRoomsForManagementAsync(
+        Guid actorUserId,
+        bool isAdmin,
         Guid? propertyId,
         RoomOperationalStatus? status,
         int page,
@@ -23,6 +25,8 @@ public interface IRoomRepository
         CancellationToken cancellationToken = default);
 
     Task<int> GetTotalCountForManagementAsync(
+        Guid actorUserId,
+        bool isAdmin,
         Guid? propertyId,
         RoomOperationalStatus? status,
         CancellationToken cancellationToken = default);

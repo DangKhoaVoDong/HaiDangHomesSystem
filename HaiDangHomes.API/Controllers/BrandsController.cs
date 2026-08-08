@@ -46,7 +46,7 @@ public class BrandsController : ControllerBase
         {
             return BadRequest(ApiResponse<BrandDto>.ErrorResponse(result.Error ?? "Failed to create brand"));
         }
-        return Ok(ApiResponse<BrandDto>.SuccessResponse(result.Value));
+        return Ok(ApiResponse<BrandDto>.SuccessResponse(result.Value!));
     }
 
     [HttpPut("{id:guid}")]
@@ -63,7 +63,7 @@ public class BrandsController : ControllerBase
         {
             return BadRequest(ApiResponse<BrandDto>.ErrorResponse(result.Error ?? "Failed to update brand"));
         }
-        return Ok(ApiResponse<BrandDto>.SuccessResponse(result.Value));
+        return Ok(ApiResponse<BrandDto>.SuccessResponse(result.Value!));
     }
 
     [HttpDelete("{id:guid}")]

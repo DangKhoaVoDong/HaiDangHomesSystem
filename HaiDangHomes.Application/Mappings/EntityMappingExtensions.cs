@@ -56,10 +56,17 @@ public static class EntityMappingExtensions
             property.Id,
             property.Name,
             property.Description,
+            property.CategoryId,
             property.Category?.Name ?? "",
+            property.Category?.AllowsRooms ?? true,
             property.Address,
             property.City,
+            property.District,
+            property.Ward,
+            property.Latitude,
+            property.Longitude,
             property.ThumbnailUrl,
+            property.IsActive,
             property.IsFeatured,
             property.BrandName,
             property.TotalRooms,
@@ -81,6 +88,7 @@ public static class EntityMappingExtensions
             room.BedCount,
             room.BathroomCount,
             room.SizeInSqm,
+            room.TotalUnits,
             room.IsActive,
             room.IsAvailable,
             room.Images?.Select(i => i.ToDto()).ToList() ?? new List<RoomImageDto>(),
@@ -97,6 +105,7 @@ public static class EntityMappingExtensions
             room.RoomNumber,
             room.PricePerNight,
             room.MaxOccupancy,
+            room.TotalUnits,
             room.IsAvailable,
             room.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl ?? room.Images?.FirstOrDefault()?.ImageUrl);
     }
@@ -154,12 +163,13 @@ public static class EntityMappingExtensions
             booking.DiscountAmount,
             booking.FinalPrice,
             booking.Status,
-            booking.PaymentStatus,
-            booking.QrCode,
-            booking.PaidAt,
             booking.CheckedInAt,
             booking.CompletedAt,
-            booking.SpecialRequests);
+            booking.SpecialRequests,
+            booking.GuestFullName,
+            booking.GuestEmail,
+            booking.GuestPhone,
+            booking.AdminNote);
     }
 
     public static BookingListDto ToListDto(this Booking booking)
@@ -185,6 +195,7 @@ public static class EntityMappingExtensions
             category.IconUrl,
             category.DisplayOrder,
             category.IsActive,
+            category.AllowsRooms,
             category.Translations?.Select(t => t.ToDto()).ToList());
     }
 

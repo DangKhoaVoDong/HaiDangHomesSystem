@@ -59,24 +59,32 @@ public class CategoriesController : ControllerBase
         {
             return BadRequest(ApiResponse<CategoryAdminDto>.ErrorResponse(result.Error ?? "Failed to create category"));
         }
-        return Ok(ApiResponse<CategoryAdminDto>.SuccessResponse(result.Value));
+        return Ok(ApiResponse<CategoryAdminDto>.SuccessResponse(result.Value!));
     }
 
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponse<CategoryAdminDto>>> Update(Guid id, [FromBody] UpdateAdminCategoryCommand cmd)
+    public async Task<ActionResult<ApiResponse<CategoryAdminDto>>> Update(
+        Guid id,
+        [FromBody] UpdateAdminCategoryRequest request)
     {
-        if (id != cmd.Id)
-        {
-            return BadRequest(ApiResponse<CategoryAdminDto>.ErrorResponse("Id mismatch"));
-        }
+        var cmd = new UpdateAdminCategoryCommand(
+            id,
+            request.NameVi,
+            request.NameEn,
+            request.DescriptionVi,
+            request.DescriptionEn,
+            request.IconUrl,
+            request.DisplayOrder,
+            request.IsActive,
+            request.AllowsRooms);
 
         var result = await _mediator.Send(cmd);
         if (!result.IsSuccess)
         {
             return BadRequest(ApiResponse<CategoryAdminDto>.ErrorResponse(result.Error ?? "Failed to update category"));
         }
-        return Ok(ApiResponse<CategoryAdminDto>.SuccessResponse(result.Value));
+        return Ok(ApiResponse<CategoryAdminDto>.SuccessResponse(result.Value!));
     }
 
     [HttpDelete("{id:guid}")]

@@ -227,6 +227,13 @@ public class GetBookingByCodeQueryHandler : IRequestHandler<GetBookingByCodeQuer
     public async Task<BookingDto?> Handle(GetBookingByCodeQuery request, CancellationToken cancellationToken)
     {
         var booking = await _bookingRepository.GetByCodeAsync(request.BookingCode, cancellationToken);
+        if (booking == null)
+            return null;
+        var ownsBooking = booking.UserId == request.RequesterId;
+        var managesProperty = request.IsManagerOrAdmin &&
+                              booking.Room?.Property?.HostId == request.RequesterId;
+        if (!request.IsAdmin && !ownsBooking && !managesProperty)
+            return null;
         return booking?.ToDto();
     }
 }

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   // Allow images from Cloudinary, S3/CloudFront, and other sources
   images: {
     remotePatterns: [

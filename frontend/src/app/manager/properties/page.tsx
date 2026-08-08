@@ -24,8 +24,10 @@ import {
   Power,
   ImageIcon,
 } from 'lucide-react';
-import { propertiesApi, categoriesApi, brandsApi, getApiData, getApiError, BRANDS } from '@/lib/api';
+import { propertiesApi, categoriesApi, brandsApi, getApiData, getApiError, isApiSuccess, BRANDS } from '@/lib/api';
 import ImageUploadField from '@/components/ImageUploadField';
+import { useAuthStore } from '@/stores/auth';
+import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
 
 const navItems = [
   { icon: Building2, label: 'Quản lý căn nhà', active: true, href: '/manager/properties' },
@@ -67,15 +69,16 @@ const emptyForm: PropertyForm = {
   brandName: '',
 };
 
-export default function ManagerPropertiesPage() {
+export function PropertyManagementView({ adminMode = false }: { adminMode?: boolean }) {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<PropertyForm | null>(null);
   const [deleting, setDeleting] = useState<any | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const myPropertiesQuery = useQuery({
-    queryKey: ['my-properties'],
+    queryKey: ['my-properties', userId],
     queryFn: async () => {
       const res = await propertiesApi.getMyProperties('vi');
       return getApiData(res) ?? [];
@@ -128,7 +131,12 @@ export default function ManagerPropertiesPage() {
         isFeatured: data.isFeatured,
         brandName: data.brandName.trim() || undefined,
       };
-      return propertiesApi.create(payload as any);
+      const response = await propertiesApi.create(payload as any);
+      const created = getApiData(response);
+      if (!created?.id) throw new Error(getApiError(response));
+      const persisted = await propertiesApi.getById(created.id);
+      if (!getApiData(persisted)) throw new Error('Căn nhà chưa được lưu ổn định trong database');
+      return response;
     },
     onSuccess: (res) => {
       if (getApiData(res)) {
@@ -141,7 +149,7 @@ export default function ManagerPropertiesPage() {
         toast.error(getApiError(res) ?? 'Tạo thất bại');
       }
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Có lỗi xảy ra'),
+    onError: (e: unknown) => toast.error(getApiError(e)),
   });
 
   const updateMutation = useMutation({
@@ -162,7 +170,12 @@ export default function ManagerPropertiesPage() {
         isFeatured: data.isFeatured,
         brandName: data.brandName.trim() || undefined,
       };
-      return propertiesApi.update(data.id, payload as any);
+      const response = await propertiesApi.update(data.id, payload as any);
+      const updated = getApiData(response);
+      if (!updated?.id) throw new Error(getApiError(response));
+      const persisted = await propertiesApi.getById(updated.id);
+      if (!getApiData(persisted)) throw new Error('Không đọc lại được căn nhà sau khi cập nhật');
+      return response;
     },
     onSuccess: (res) => {
       if (getApiData(res)) {
@@ -174,13 +187,13 @@ export default function ManagerPropertiesPage() {
         toast.error(getApiError(res) ?? 'Cập nhật thất bại');
       }
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Có lỗi xảy ra'),
+    onError: (e: unknown) => toast.error(getApiError(e)),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => propertiesApi.delete(id),
     onSuccess: (res) => {
-      if (getApiData(res) !== null && getApiData(res) !== undefined) {
+      if (isApiSuccess(res)) {
         toast.success('Đã xoá căn nhà');
         queryClient.invalidateQueries({ queryKey: ['my-properties'] });
         queryClient.invalidateQueries({ queryKey: ['properties'] });
@@ -189,7 +202,7 @@ export default function ManagerPropertiesPage() {
         toast.error(getApiError(res) ?? 'Xoá thất bại');
       }
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Có lỗi xảy ra'),
+    onError: (e: unknown) => toast.error(getApiError(e)),
   });
 
   const toggleActiveMutation = useMutation({
@@ -239,18 +252,29 @@ export default function ManagerPropertiesPage() {
     });
   };
 
-  const submit = () => {
-    if (!editing) return;
-    if (!editing.name.trim() || !editing.address.trim() || !editing.categoryId) {
+  const submit = (data: PropertyForm) => {
+    if (!data.name.trim() || !data.address.trim() || !data.categoryId) {
       toast.error('Vui lòng nhập Tên, Địa chỉ và Loại hình');
       return;
     }
-    if (editing.id) updateMutation.mutate(editing);
-    else createMutation.mutate(editing);
+
+    const latitude = data.latitude ? Number(data.latitude) : null;
+    const longitude = data.longitude ? Number(data.longitude) : null;
+    if (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+      toast.error('Vĩ độ phải nằm trong khoảng -90 đến 90');
+      return;
+    }
+    if (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) {
+      toast.error('Kinh độ phải nằm trong khoảng -180 đến 180');
+      return;
+    }
+
+    if (data.id) updateMutation.mutate(data);
+    else createMutation.mutate(data);
   };
 
   const renderSidebar = () => (
-    <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex flex-col z-50">
+    <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50">
       <div className="px-6 py-8 border-b border-gray-200">
         <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDangHomes</h1>
         <p className="text-sm text-gray-500 mt-1">Luxury Manager</p>
@@ -276,20 +300,21 @@ export default function ManagerPropertiesPage() {
           <HelpCircle className="w-5 h-5" />
           <span className="text-sm">Support</span>
         </button>
+        <ManagerLogoutButton />
       </div>
     </aside>
   );
 
   return (
     <div className="min-h-screen bg-[#fcf9f8] flex">
-      {renderSidebar()}
+      {!adminMode && renderSidebar()}
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen ${adminMode ? '' : 'lg:ml-64'}`}>
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 px-16 py-4">
+        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 lg:px-10 xl:px-16 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/manager" className="text-gray-500 hover:text-[#D24A15]">
+              <Link href={adminMode ? '/admin' : '/manager'} className="text-gray-500 hover:text-[#D24A15]">
                 <ChevronLeft className="w-6 h-6" />
               </Link>
               <h2 className="font-serif text-2xl font-bold text-[#D24A15] hidden md:block">
@@ -319,10 +344,12 @@ export default function ManagerPropertiesPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 px-16 py-8">
-          <div className="flex items-center justify-between mb-6">
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 xl:px-16 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Căn nhà của bạn</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {adminMode ? 'Danh sách căn nhà' : 'Căn nhà của bạn'}
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Tổng cộng {properties.length} căn nhà · {properties.filter((p: any) => p.isActive).length} đang hoạt động
               </p>
@@ -332,7 +359,7 @@ export default function ManagerPropertiesPage() {
                 setEditing({ ...emptyForm, categoryId: categoriesQuery.data?.[0]?.id ?? '' });
                 setShowCreate(true);
               }}
-              className="bg-[#D24A15] hover:bg-[#B23E10] text-white font-medium px-6 py-2.5 rounded-full flex items-center gap-2 transition-colors"
+              className="w-full sm:w-auto justify-center bg-[#D24A15] hover:bg-[#B23E10] text-white font-medium px-6 py-2.5 rounded-full flex items-center gap-2 transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm căn nhà</span>
@@ -464,11 +491,7 @@ export default function ManagerPropertiesPage() {
             setEditing(null);
             setShowCreate(false);
           }}
-          onSubmit={(data) => {
-            setEditing(data);
-            if (data.id) updateMutation.mutate(data);
-            else createMutation.mutate(data);
-          }}
+          onSubmit={submit}
         />
       )}
 
@@ -619,7 +642,7 @@ function PropertyFormModal({
             />
           </Field>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Thành phố">
               <input
                 type="text"
@@ -647,7 +670,7 @@ function PropertyFormModal({
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Vĩ độ">
               <input
                 type="number"
@@ -731,4 +754,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+export default function ManagerPropertiesPage() {
+  return <PropertyManagementView />;
 }

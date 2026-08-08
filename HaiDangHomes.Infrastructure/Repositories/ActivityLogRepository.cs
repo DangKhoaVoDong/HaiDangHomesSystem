@@ -16,6 +16,8 @@ public class ActivityLogRepository : IActivityLogRepository
     }
 
     public async Task<List<ActivityLog>> GetLogsAsync(
+        Guid actorUserId,
+        bool isAdmin,
         int page,
         int pageSize,
         string? entityType = null,
@@ -23,6 +25,9 @@ public class ActivityLogRepository : IActivityLogRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.ActivityLogs.AsQueryable();
+
+        if (!isAdmin)
+            query = query.Where(l => l.UserId == actorUserId);
 
         if (!string.IsNullOrEmpty(entityType))
             query = query.Where(l => l.EntityType == entityType);
@@ -40,5 +45,6 @@ public class ActivityLogRepository : IActivityLogRepository
     public async Task AddAsync(ActivityLog log, CancellationToken cancellationToken = default)
     {
         await _context.ActivityLogs.AddAsync(log, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

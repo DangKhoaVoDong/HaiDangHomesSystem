@@ -15,6 +15,7 @@ public class Room : AuditableEntityBase<Guid>
     public int BedCount { get; set; } = 1;
     public int BathroomCount { get; set; } = 1;
     public int SizeInSqm { get; set; }
+    public int TotalUnits { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
 

@@ -86,7 +86,10 @@ public class PropertiesController : ControllerBase
             return Unauthorized();
 
         var lang = language.ToLower() == "en" ? SupportedLanguage.En : SupportedLanguage.Vi;
-        var result = await _mediator.Send(new GetPropertiesByHostQuery(Guid.Parse(userId), lang));
+        var result = await _mediator.Send(new GetPropertiesByHostQuery(
+            Guid.Parse(userId),
+            User.IsInRole("Admin"),
+            lang));
         return Ok(ApiResponse<List<PropertyListDto>>.SuccessResponse(result));
     }
 
@@ -130,6 +133,8 @@ public class PropertiesController : ControllerBase
     {
         var command = new UpdatePropertyCommand(
             id,
+            GetCurrentUserId(),
+            User.IsInRole("Admin"),
             request.Name,
             request.Description,
             request.CategoryId,
@@ -156,11 +161,17 @@ public class PropertiesController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult<ApiResponse>> Delete(Guid id)
     {
-        var result = await _mediator.Send(new DeletePropertyCommand(id));
+        var result = await _mediator.Send(new DeletePropertyCommand(
+            id, GetCurrentUserId(), User.IsInRole("Admin")));
 
         if (!result.IsSuccess)
             return BadRequest(ApiResponse.ErrorResponse(result.Error ?? "Failed to delete property"));
 
         return Ok(ApiResponse.SuccessResponse("Property deleted successfully"));
+    }
+    private Guid GetCurrentUserId()
+    {
+        var value = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(value, out var id) ? id : Guid.Empty;
     }
 }

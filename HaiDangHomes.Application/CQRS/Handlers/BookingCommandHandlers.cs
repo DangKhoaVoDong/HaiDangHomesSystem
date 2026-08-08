@@ -47,14 +47,24 @@ public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand,
 public class UpdateBookingStatusCommandHandler : IRequestHandler<UpdateBookingStatusCommand, Result<BookingDto>>
 {
     private readonly IBookingService _bookingService;
+    private readonly IBookingRepository _bookingRepository;
 
-    public UpdateBookingStatusCommandHandler(IBookingService bookingService)
+    public UpdateBookingStatusCommandHandler(
+        IBookingService bookingService,
+        IBookingRepository bookingRepository)
     {
         _bookingService = bookingService;
+        _bookingRepository = bookingRepository;
     }
 
     public async Task<Result<BookingDto>> Handle(UpdateBookingStatusCommand request, CancellationToken cancellationToken)
     {
+        var booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
+        if (booking == null)
+            return Result<BookingDto>.Failure("Booking not found");
+        if (!request.IsAdmin && booking.Room?.Property?.HostId != request.ActorUserId)
+            return Result<BookingDto>.Failure("Booking not found");
+
         var result = await _bookingService.UpdateBookingStatusAsync(
             request.BookingId,
             request.NewStatus,
@@ -66,6 +76,31 @@ public class UpdateBookingStatusCommandHandler : IRequestHandler<UpdateBookingSt
         }
 
         return Result<BookingDto>.Success(result.Booking!.ToDto());
+    }
+}
+
+public class CancelBookingCommandHandler : IRequestHandler<CancelBookingCommand, Result>
+{
+    private readonly IBookingRepository _bookingRepository;
+    private readonly IBookingService _bookingService;
+
+    public CancelBookingCommandHandler(
+        IBookingRepository bookingRepository,
+        IBookingService bookingService)
+    {
+        _bookingRepository = bookingRepository;
+        _bookingService = bookingService;
+    }
+
+    public async Task<Result> Handle(CancelBookingCommand request, CancellationToken cancellationToken)
+    {
+        var booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
+        if (booking == null || booking.UserId != request.ActorUserId)
+            return Result.Failure("Booking not found");
+
+        var result = await _bookingService.UpdateBookingStatusAsync(
+            request.BookingId, BookingStatus.Cancelled, request.Reason);
+        return result.Success ? Result.Success() : Result.Failure(result.Error ?? "Cancellation failed");
     }
 }
 
@@ -89,11 +124,12 @@ public static class BookingMappingExtensions
             booking.DiscountAmount,
             booking.FinalPrice,
             booking.Status,
-            booking.PaymentStatus,
-            booking.QrCode,
-            booking.PaidAt,
             booking.CheckedInAt,
             booking.CompletedAt,
-            booking.SpecialRequests);
+            booking.SpecialRequests,
+            booking.GuestFullName,
+            booking.GuestEmail,
+            booking.GuestPhone,
+            booking.AdminNote);
     }
 }

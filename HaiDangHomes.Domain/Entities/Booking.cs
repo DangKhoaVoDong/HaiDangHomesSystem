@@ -5,7 +5,7 @@ namespace HaiDangHomes.Domain.Entities;
 public class Booking : AuditableEntityBase<Guid>
 {
     public string BookingCode { get; set; } = string.Empty;
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public Guid RoomId { get; set; }
     public DateTime CheckInDate { get; set; }
     public DateTime CheckOutDate { get; set; }
@@ -33,9 +33,10 @@ public class Booking : AuditableEntityBase<Guid>
     // Notes
     public string? SpecialRequests { get; set; }
     public string? CancellationReason { get; set; }
+    public string? AdminNote { get; set; }
     
     // Navigation properties
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
     public virtual Room Room { get; set; } = null!;
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

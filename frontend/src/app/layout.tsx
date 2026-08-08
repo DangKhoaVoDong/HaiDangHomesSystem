@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
   title: "HaiDang Homes - Hệ thống đặt phòng trực tuyến",
-  description: "Đặt phòng căn hộ dịch vụ, homestay, khách sạn trực tuyến với giá tốt nhất",
+  description: "Gửi yêu cầu đặt căn hộ dịch vụ, homestay và khách sạn trực tuyến.",
 };
 
 export default function RootLayout({
@@ -17,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className={inter.className}>
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>

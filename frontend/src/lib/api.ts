@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { useAuthStore } from '@/stores/auth';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Booking } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5203/api';
 
@@ -29,12 +29,21 @@ export function isApiSuccess<T>(response: AxiosResponse<ApiResponse<T>> | undefi
 }
 
 // Helper to get error message from API response
-export function getApiError<T>(response: AxiosResponse<ApiResponse<T>> | undefined): string {
-  if (!response) return 'Network error';
-  if (response.data?.errors && response.data.errors.length > 0) {
-    return response.data.errors[0];
+export function getApiError<T>(
+  value: AxiosResponse<ApiResponse<T>> | unknown
+): string {
+  const response = axios.isAxiosError(value) ? value.response : value;
+  if (!response || typeof response !== 'object' || !('data' in response)) {
+    return 'Network error';
   }
-  return response.data?.message || 'An error occurred';
+  const body = response.data as
+    | ApiResponse<T>
+    | { detail?: string; errors?: string[] }
+    | undefined;
+  if (body?.errors?.length) return body.errors[0];
+  if (body && 'message' in body && body.message) return body.message;
+  if (body && 'detail' in body && body.detail) return body.detail;
+  return 'An error occurred';
 }
 
 api.interceptors.request.use(
@@ -210,6 +219,7 @@ export const roomsApi = {
     bedCount: number;
     bathroomCount: number;
     sizeInSqm: number;
+    totalUnits?: number;
     imageUrls?: string[];
     amenityIds?: string[];
   }) => api.post<ApiResponse<any>>('/rooms', data),
@@ -226,6 +236,7 @@ export const roomsApi = {
       bedCount: number;
       bathroomCount: number;
       sizeInSqm: number;
+      totalUnits?: number;
       isActive: boolean;
       isAvailable: boolean;
     }
@@ -234,10 +245,15 @@ export const roomsApi = {
   delete: (id: string) => api.delete<ApiResponse<null>>(`/rooms/${id}`),
 };
 
+export const activityLogsApi = {
+  getRecent: (pageSize = 10) =>
+    api.get<ApiResponse<any[]>>('/activity-logs', { params: { pageSize } }),
+};
+
 // Bookings API
 export const bookingsApi = {
   getByCode: (bookingCode: string) =>
-    api.get<ApiResponse<any>>(`/bookings/${bookingCode}`),
+    api.get<ApiResponse<Booking>>(`/bookings/${bookingCode}`),
 
   getMyBookings: (status?: number) =>
     api.get<ApiResponse<any[]>>('/bookings/my-bookings', { params: { status } }),
@@ -252,13 +268,13 @@ export const bookingsApi = {
     guestEmail?: string;
     guestPhone?: string;
     guestIdCardNumber?: string;
-  }) => api.post<ApiResponse<any>>('/bookings', data),
+  }) => api.post<ApiResponse<Booking>>('/bookings', data),
 
-  updateStatus: (bookingId: string, newStatus: number) =>
-    api.put<ApiResponse<any>>(`/bookings/${bookingId}/status`, { newStatus }),
+  updateStatus: (bookingId: string, newStatus: number, adminNote?: string) =>
+    api.put<ApiResponse<Booking>>(`/bookings/${bookingId}/status`, { newStatus, adminNote }),
 
   cancel: (bookingId: string, reason: string) =>
-    api.post<ApiResponse<any>>(`/bookings/${bookingId}/cancel`, { reason }),
+    api.post<ApiResponse<null>>(`/bookings/${bookingId}/cancel`, { reason }),
 
   // Manager endpoints
   getAll: (params?: {
@@ -312,6 +328,7 @@ export const categoriesAdminApi = {
     descriptionEn?: string;
     iconUrl?: string;
     displayOrder: number;
+    allowsRooms: boolean;
   }) => api.post<ApiResponse<any>>('/categories', data),
 
   update: (
@@ -324,8 +341,9 @@ export const categoriesAdminApi = {
       iconUrl?: string;
       displayOrder: number;
       isActive: boolean;
+      allowsRooms: boolean;
     }
-  ) => api.put<ApiResponse<any>>(`/categories/${id}`, data),
+  ) => api.put<ApiResponse<any>>(`/categories/${id}`, { id, ...data }),
 
   remove: (id: string) =>
     api.delete<ApiResponse<any>>(`/categories/${id}`),
@@ -356,13 +374,4 @@ export const amenitiesApi = {
 
   getById: (id: string, language?: string) =>
     api.get<ApiResponse<any>>(`/amenities/${id}`, { params: { language } }),
-};
-
-// Payments API
-export const paymentsApi = {
-  createPaymentUrl: (bookingId: string) =>
-    api.post<ApiResponse<{ paymentUrl: string; transactionId: string }>>('/payments/create-payment-url', { bookingId }),
-
-  checkPaymentStatus: (orderCode: string | number) =>
-    api.get<ApiResponse<any>>(`/payments/check-status/${orderCode}`),
 };

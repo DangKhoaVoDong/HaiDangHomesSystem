@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { bookingsApi, getApiData, getApiError } from '@/lib/api';
-import { useAuthStore } from '@/stores/auth';
 import { useLanguageStore } from '@/stores/language';
+import type { Booking } from '@/types';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { differenceInDays } from 'date-fns';
@@ -19,10 +19,9 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ roomId, roomName, propertyName, pricePerNight, maxOccupancy }: BookingFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated } = useAuthStore();
   const { language } = useLanguageStore();
+  const [submittedBooking, setSubmittedBooking] = useState<Booking | null>(null);
   
   const checkIn = searchParams.get('checkIn') || '';
   const checkOut = searchParams.get('checkOut') || '';
@@ -52,7 +51,7 @@ export function BookingForm({ roomId, roomName, propertyName, pricePerNight, max
       nights: 'đêm',
       bookNow: 'Đặt ngay',
       pleaseLogin: 'Vui lòng đăng nhập để đặt phòng',
-      bookingSuccess: 'Đặt phòng thành công! Đang chuyển đến thanh toán...',
+      bookingSuccess: 'Yêu cầu đã được gửi. Chúng tôi đang kiểm tra phòng và sẽ phản hồi sớm nhất qua email hoặc số điện thoại của bạn.',
       bookingError: 'Đặt phòng thất bại',
     },
     en: {
@@ -67,7 +66,7 @@ export function BookingForm({ roomId, roomName, propertyName, pricePerNight, max
       nights: 'nights',
       bookNow: 'Book Now',
       pleaseLogin: 'Please login to book',
-      bookingSuccess: 'Booking successful! Redirecting to payment...',
+      bookingSuccess: 'Your request was received. We are checking the room and will contact you by email or phone as soon as possible.',
       bookingError: 'Booking failed',
     },
   };
@@ -75,25 +74,50 @@ export function BookingForm({ roomId, roomName, propertyName, pricePerNight, max
   const t = translations[language];
 
   const bookingMutation = useMutation({
-    mutationFn: (data: any) => bookingsApi.create(data),
+    mutationFn: bookingsApi.create,
     onSuccess: (response) => {
       const bookingData = getApiData(response);
       if (bookingData) {
+        setSubmittedBooking(bookingData);
         toast.success(t.bookingSuccess);
-        // Navigate to payment page with booking code
-        router.push(`/booking/${bookingData.bookingCode}/payment`);
       } else {
         toast.error(getApiError(response) || t.bookingError);
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t.bookingError);
+    onError: (error: unknown) => {
+      toast.error(getApiError(error) || t.bookingError);
     },
   });
 
+  if (submittedBooking) {
+    return (
+      <div className="bg-white border rounded-lg p-6 sticky top-24" role="status">
+        <h3 className="text-xl font-bold text-green-700 mb-3">
+          {language === 'vi' ? 'Đã tiếp nhận yêu cầu' : 'Request received'}
+        </h3>
+        <p className="text-gray-700 mb-4">{t.bookingSuccess}</p>
+        <div className="rounded-md bg-gray-50 p-4 text-sm">
+          <span className="text-gray-500">
+            {language === 'vi' ? 'Mã yêu cầu' : 'Request code'}
+          </span>
+          <p className="font-bold text-lg">{submittedBooking.bookingCode}</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) {
+      toast.error(language === 'vi' ? 'Vui lòng chọn ngày nhận và trả phòng hợp lệ' : 'Please select valid check-in and check-out dates');
+      return;
+    }
+    if (guests < 1 || guests > maxOccupancy) {
+      toast.error(language === 'vi' ? `Phòng này nhận tối đa ${maxOccupancy} khách` : `This room allows up to ${maxOccupancy} guests`);
+      return;
+    }
+
     // Validate required guest info
     if (!formData.guestFullName || !formData.guestEmail || !formData.guestPhone) {
       toast.error(language === 'vi' ? 'Vui lòng điền đầy đủ thông tin' : 'Please fill in all required fields');
@@ -114,7 +138,7 @@ export function BookingForm({ roomId, roomName, propertyName, pricePerNight, max
   };
 
   return (
-    <div className="bg-white border rounded-lg p-6 sticky top-24">
+    <div className="bg-white border rounded-lg p-4 sm:p-6 lg:sticky lg:top-24">
       <h3 className="text-xl font-bold mb-4">{t.title}</h3>
       
       <div className="mb-4 text-sm text-gray-600">

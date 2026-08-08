@@ -36,7 +36,7 @@ export function Header() {
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 w-full">
-      <div className="max-w-[1400px] mx-auto px-6 md:px-16 h-20 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <span className="font-serif text-2xl text-white tracking-wider">

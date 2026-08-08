@@ -38,17 +38,6 @@ services:
       - key: Cloudinary__ApiSecret
         sync: false
 
-      - key: PayOS__ClientId
-        sync: false
-      - key: PayOS__ApiKey
-        sync: false
-      - key: PayOS__ChecksumKey
-        sync: false
-      - key: PayOS__ReturnUrl
-        sync: false
-      - key: PayOS__CancelUrl
-        sync: false
-
       - key: Resend__ApiKey
         sync: false
       - key: Resend__FromEmail

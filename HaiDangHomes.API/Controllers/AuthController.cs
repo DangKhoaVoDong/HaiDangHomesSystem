@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using HaiDangHomes.Application.CQRS.Commands;
 using HaiDangHomes.Application.CQRS.Queries;
 using HaiDangHomes.Application.DTOs;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HaiDangHomes.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -71,7 +73,11 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<ActionResult<ApiResponse>> Logout([FromBody] RefreshTokenRequest request)
     {
-        var command = new LogoutCommand(request.RefreshToken);
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userId, out var parsedUserId))
+            return Unauthorized(ApiResponse.ErrorResponse("Unauthorized"));
+
+        var command = new LogoutCommand(parsedUserId, request.RefreshToken);
         await _mediator.Send(command);
 
         return Ok(ApiResponse.SuccessResponse("Logged out successfully"));

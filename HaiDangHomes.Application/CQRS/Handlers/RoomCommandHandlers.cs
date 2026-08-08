@@ -32,19 +32,25 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Resul
 {
     private readonly IRoomRepository _roomRepository;
     private readonly IPropertyRepository _propertyRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IRoomImageRepository _roomImageRepository;
     private readonly IRoomAmenityRepository _roomAmenityRepository;
+    private readonly IActivityLogRepository _activityLogRepository;
 
     public CreateRoomCommandHandler(
         IRoomRepository roomRepository,
         IPropertyRepository propertyRepository,
+        ICategoryRepository categoryRepository,
         IRoomImageRepository roomImageRepository,
-        IRoomAmenityRepository roomAmenityRepository)
+        IRoomAmenityRepository roomAmenityRepository,
+        IActivityLogRepository activityLogRepository)
     {
         _roomRepository = roomRepository;
         _propertyRepository = propertyRepository;
+        _categoryRepository = categoryRepository;
         _roomImageRepository = roomImageRepository;
         _roomAmenityRepository = roomAmenityRepository;
+        _activityLogRepository = activityLogRepository;
     }
 
     public async Task<Result<RoomDto>> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
@@ -54,6 +60,12 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Resul
         {
             return Result<RoomDto>.Failure("Property not found");
         }
+        if (!request.IsAdmin && property.HostId != request.ActorUserId)
+            return Result<RoomDto>.Failure("Property not found");
+
+        var category = await _categoryRepository.GetByIdAsync(property.CategoryId, cancellationToken);
+        if (category == null || !category.AllowsRooms)
+            return Result<RoomDto>.Failure("Loại hình của căn nhà này là cho thuê nguyên căn và không cho phép thêm phòng.");
 
         // Pre-check: detect duplicate (PropertyId, RoomNumber) before hitting DB
         var existingRooms = await _roomRepository.GetByPropertyIdAsync(request.PropertyId, cancellationToken);
@@ -76,6 +88,7 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Resul
             BedCount = request.BedCount,
             BathroomCount = request.BathroomCount,
             SizeInSqm = request.SizeInSqm,
+            TotalUnits = Math.Max(1, request.TotalUnits),
             IsActive = true,
             IsAvailable = true,
             OperationalStatus = RoomOperationalStatus.Available,
@@ -134,6 +147,18 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Resul
             property.TotalRooms = property.TotalRooms + 1;
             await _propertyRepository.UpdateAsync(property, cancellationToken);
 
+            await _activityLogRepository.AddAsync(new ActivityLog
+            {
+                Id = Guid.NewGuid(),
+                Action = "Created",
+                EntityType = "Room",
+                EntityId = created.Id,
+                UserId = request.ActorUserId,
+                Details = $"Đã đăng phòng \"{created.Name}\" tại {property.Name}.",
+                LogType = ActivityLogType.Success,
+                CreatedAt = DateTime.UtcNow
+            }, cancellationToken);
+
             var withDetails = await _roomRepository.GetByIdWithDetailsAsync(created.Id, cancellationToken);
             return Result<RoomDto>.Success(withDetails!.ToDto());
         }
@@ -149,10 +174,17 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Resul
 public class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand, Result<RoomDto>>
 {
     private readonly IRoomRepository _roomRepository;
+    private readonly IPropertyRepository _propertyRepository;
+    private readonly IActivityLogRepository _activityLogRepository;
 
-    public UpdateRoomCommandHandler(IRoomRepository roomRepository)
+    public UpdateRoomCommandHandler(
+        IRoomRepository roomRepository,
+        IPropertyRepository propertyRepository,
+        IActivityLogRepository activityLogRepository)
     {
         _roomRepository = roomRepository;
+        _propertyRepository = propertyRepository;
+        _activityLogRepository = activityLogRepository;
     }
 
     public async Task<Result<RoomDto>> Handle(UpdateRoomCommand request, CancellationToken cancellationToken)
@@ -162,6 +194,9 @@ public class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand, Resul
         {
             return Result<RoomDto>.Failure("Room not found");
         }
+        var property = await _propertyRepository.GetByIdAsync(room.PropertyId, cancellationToken);
+        if (property == null || (!request.IsAdmin && property.HostId != request.ActorUserId))
+            return Result<RoomDto>.Failure("Room not found");
 
         room.Name = request.Name;
         room.Description = request.Description;
@@ -172,10 +207,24 @@ public class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand, Resul
         room.BedCount = request.BedCount;
         room.BathroomCount = request.BathroomCount;
         room.SizeInSqm = request.SizeInSqm;
+        if (request.TotalUnits.HasValue)
+            room.TotalUnits = Math.Max(1, request.TotalUnits.Value);
         room.IsActive = request.IsActive;
         room.IsAvailable = request.IsAvailable;
 
         await _roomRepository.UpdateAsync(room, cancellationToken);
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            Id = Guid.NewGuid(),
+            Action = "Updated",
+            EntityType = "Room",
+            EntityId = room.Id,
+            UserId = request.ActorUserId,
+            Details = $"Đã cập nhật thông tin phòng \"{room.Name}\".",
+            LogType = ActivityLogType.RoomStatus,
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
 
         var withDetails = await _roomRepository.GetByIdWithDetailsAsync(room.Id, cancellationToken);
         return Result<RoomDto>.Success(withDetails!.ToDto());
@@ -186,11 +235,16 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, Resul
 {
     private readonly IRoomRepository _roomRepository;
     private readonly IPropertyRepository _propertyRepository;
+    private readonly IActivityLogRepository _activityLogRepository;
 
-    public DeleteRoomCommandHandler(IRoomRepository roomRepository, IPropertyRepository propertyRepository)
+    public DeleteRoomCommandHandler(
+        IRoomRepository roomRepository,
+        IPropertyRepository propertyRepository,
+        IActivityLogRepository activityLogRepository)
     {
         _roomRepository = roomRepository;
         _propertyRepository = propertyRepository;
+        _activityLogRepository = activityLogRepository;
     }
 
     public async Task<Result> Handle(DeleteRoomCommand request, CancellationToken cancellationToken)
@@ -200,6 +254,9 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, Resul
         {
             return Result.Failure("Room not found");
         }
+        var owner = await _propertyRepository.GetByIdAsync(room.PropertyId, cancellationToken);
+        if (owner == null || (!request.IsAdmin && owner.HostId != request.ActorUserId))
+            return Result.Failure("Room not found");
 
         await _roomRepository.DeleteAsync(request.Id, cancellationToken);
 
@@ -210,6 +267,18 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, Resul
             await _propertyRepository.UpdateAsync(property, cancellationToken);
         }
 
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            Id = Guid.NewGuid(),
+            Action = "Deleted",
+            EntityType = "Room",
+            EntityId = room.Id,
+            UserId = request.ActorUserId,
+            Details = $"Đã xóa phòng \"{room.Name}\".",
+            LogType = ActivityLogType.Warning,
+            CreatedAt = DateTime.UtcNow
+        }, cancellationToken);
+
         return Result.Success();
     }
 }
@@ -219,18 +288,15 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
     private readonly IPropertyRepository _propertyRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IBrandRepository _brandRepository;
-    private readonly IRoomRepository _roomRepository;
 
     public CreatePropertyCommandHandler(
         IPropertyRepository propertyRepository,
         ICategoryRepository categoryRepository,
-        IBrandRepository brandRepository,
-        IRoomRepository roomRepository)
+        IBrandRepository brandRepository)
     {
         _propertyRepository = propertyRepository;
         _categoryRepository = categoryRepository;
         _brandRepository = brandRepository;
-        _roomRepository = roomRepository;
     }
 
     public async Task<Result<PropertyDto>> Handle(CreatePropertyCommand request, CancellationToken cancellationToken)
@@ -267,42 +333,8 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
 
         var created = await _propertyRepository.AddAsync(property, cancellationToken);
 
-        // Auto-create 1 phòng cho căn hộ để trang Home hiển thị được ngay
-        if (IsApartmentCategory(category.Name))
-        {
-            var defaultRoom = new Room
-            {
-                Id = Guid.NewGuid(),
-                PropertyId = created.Id,
-                Name = created.Name,
-                RoomNumber = 1,
-                Floor = 1,
-                PricePerNight = 0,
-                MaxOccupancy = 4,
-                BedCount = 2,
-                BathroomCount = 1,
-                SizeInSqm = 50,
-                IsActive = true,
-                IsAvailable = true,
-                OperationalStatus = RoomOperationalStatus.Available,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _roomRepository.AddAsync(defaultRoom, cancellationToken);
-            created.TotalRooms = 1;
-            await _propertyRepository.UpdateAsync(created, cancellationToken);
-        }
-
         var withDetails = await _propertyRepository.GetByIdWithDetailsAsync(created.Id, cancellationToken);
         return Result<PropertyDto>.Success(withDetails!.ToDto());
-    }
-
-    private static bool IsApartmentCategory(string? categoryName)
-    {
-        if (string.IsNullOrWhiteSpace(categoryName)) return false;
-        return System.Text.RegularExpressions.Regex.IsMatch(
-            categoryName,
-            @"c[aă]n\s*h[oộ]|apartment",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 }
 
@@ -329,6 +361,8 @@ public class UpdatePropertyCommandHandler : IRequestHandler<UpdatePropertyComman
         {
             return Result<PropertyDto>.Failure("Property not found");
         }
+        if (!request.IsAdmin && property.HostId != request.ActorUserId)
+            return Result<PropertyDto>.Failure("Property not found");
 
         var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
         if (category == null)
@@ -374,6 +408,8 @@ public class DeletePropertyCommandHandler : IRequestHandler<DeletePropertyComman
         {
             return Result.Failure("Property not found");
         }
+        if (!request.IsAdmin && property.HostId != request.ActorUserId)
+            return Result.Failure("Property not found");
 
         try
         {

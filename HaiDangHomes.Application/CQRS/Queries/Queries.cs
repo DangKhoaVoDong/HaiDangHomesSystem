@@ -28,6 +28,7 @@ public record GetFeaturedPropertiesQuery(
 
 public record GetPropertiesByHostQuery(
     Guid HostId,
+    bool IsAdmin = false,
     SupportedLanguage Language = SupportedLanguage.Vi) : IRequest<List<PropertyListDto>>;
 
 public record SearchPropertiesQuery(
@@ -65,19 +66,27 @@ public record CheckRoomAvailabilityQuery(
 // Booking Queries
 public record GetBookingByIdQuery(Guid Id) : IRequest<BookingDto?>;
 
-public record GetBookingByCodeQuery(string BookingCode) : IRequest<BookingDto?>;
+public record GetBookingByCodeQuery(
+    string BookingCode,
+    Guid RequesterId,
+    bool IsManagerOrAdmin,
+    bool IsAdmin) : IRequest<BookingDto?>;
 
 public record GetUserBookingsQuery(
     Guid UserId,
     BookingStatus? Status = null) : IRequest<List<BookingListDto>>;
 
 public record GetAllBookingsQuery(
+    Guid ActorUserId,
+    bool IsAdmin,
     int Page = 1,
     int PageSize = 20,
     BookingStatus? Status = null,
     Guid? PropertyId = null) : IRequest<SearchResult<BookingDto>>;
 
 public record GetPropertyBookingsQuery(
+    Guid ActorUserId,
+    bool IsAdmin,
     Guid PropertyId,
     DateTime? FromDate = null,
     DateTime? ToDate = null) : IRequest<List<BookingDto>>;
@@ -138,18 +147,24 @@ public record UserStatsDto(
 public record GetRoomStatisticsQuery : IRequest<RoomStatisticsDto>;
 
 public record GetActivityLogsQuery(
+    Guid ActorUserId,
+    bool IsAdmin,
     int Page = 1,
     int PageSize = 50,
     string? EntityType = null,
     ActivityLogType? LogType = null) : IRequest<List<ActivityLogDto>>;
 
 public record GetRoomsForManagementQuery(
+    Guid ActorUserId,
+    bool IsAdmin,
     Guid? PropertyId = null,
     RoomOperationalStatus? Status = null,
     int Page = 1,
     int PageSize = 20) : IRequest<SearchResult<RoomManagementDto>>;
 
 public record GetBookingCalendarQuery(
+    Guid ActorUserId,
+    bool IsAdmin,
     DateTime StartDate,
     DateTime EndDate,
     Guid? PropertyId = null) : IRequest<List<BookingCalendarDto>>;

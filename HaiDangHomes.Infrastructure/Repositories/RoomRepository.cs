@@ -101,6 +101,8 @@ public class RoomRepository : IRoomRepository
     }
 
     public async Task<List<Room>> GetRoomsForManagementAsync(
+        Guid actorUserId,
+        bool isAdmin,
         Guid? propertyId,
         RoomOperationalStatus? status,
         int page,
@@ -114,6 +116,9 @@ public class RoomRepository : IRoomRepository
             .Include(r => r.RoomAmenities)
                 .ThenInclude(ra => ra.Amenity)
             .AsQueryable();
+
+        if (!isAdmin)
+            query = query.Where(r => r.Property.HostId == actorUserId);
 
         if (propertyId.HasValue)
             query = query.Where(r => r.PropertyId == propertyId.Value);
@@ -130,11 +135,16 @@ public class RoomRepository : IRoomRepository
     }
 
     public async Task<int> GetTotalCountForManagementAsync(
+        Guid actorUserId,
+        bool isAdmin,
         Guid? propertyId,
         RoomOperationalStatus? status,
         CancellationToken cancellationToken = default)
     {
         var query = _context.Rooms.AsQueryable();
+
+        if (!isAdmin)
+            query = query.Where(r => r.Property.HostId == actorUserId);
 
         if (propertyId.HasValue)
             query = query.Where(r => r.PropertyId == propertyId.Value);

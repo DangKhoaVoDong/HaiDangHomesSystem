@@ -10,7 +10,7 @@ export const HeroBannerSection = () => {
   const [selectedCategory, setSelectedCategory] = useState('KHÁCH SẠN & VILLA');
 
   return (
-    <section className="relative w-full min-h-[900px] flex flex-col justify-end items-center pb-16">
+    <section className="relative w-full min-h-[760px] sm:min-h-[820px] lg:min-h-[900px] flex flex-col justify-end items-center pb-8 sm:pb-12 lg:pb-16 overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <div
@@ -23,7 +23,7 @@ export const HeroBannerSection = () => {
       </div>
 
       {/* Top Metadata */}
-      <div className="absolute top-12 left-0 right-0 z-10 px-margin-desktop flex justify-between items-center w-full max-w-container-max mx-auto">
+      <div className="absolute top-6 sm:top-10 left-0 right-0 z-10 px-5 sm:px-8 lg:px-16 flex justify-between items-center gap-4 w-full max-w-container-max mx-auto">
         <span className="text-white/80 font-label-sm tracking-[0.3em] text-[10px]">
           N 11°56&apos; — E 108°26&apos;
         </span>
@@ -33,11 +33,11 @@ export const HeroBannerSection = () => {
       </div>
 
       {/* Hero Content */}
-      <div className="relative z-10 w-full max-w-container-max mx-auto px-margin-desktop text-center mb-12 mt-32">
+      <div className="relative z-10 w-full max-w-container-max mx-auto px-5 sm:px-8 lg:px-16 text-center mb-8 sm:mb-12 mt-28">
         <span className="text-white/90 font-label-sm tracking-[0.3em] text-xs uppercase mb-6 block">
           — BỘ SƯU TẬP SIGNATURE —
         </span>
-        <h1 className="font-display-lg text-[80px] md:text-[110px] italic text-white drop-shadow-lg mb-6 leading-[1.1]">
+        <h1 className="font-display-lg text-5xl sm:text-7xl lg:text-[110px] italic text-white drop-shadow-lg mb-5 leading-[1.05]">
           The Valley<br />Retreat
         </h1>
         <p className="text-white/90 font-label-sm tracking-[0.3em] text-xs uppercase mt-8">
@@ -46,16 +46,16 @@ export const HeroBannerSection = () => {
       </div>
 
       {/* Quick-Search Widget */}
-      <div className="relative z-20 w-full max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col items-center">
+      <div className="relative z-20 w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-16 flex flex-col items-center">
         {/* Tabs */}
-        <div className="flex bg-white/20 backdrop-blur-md rounded-full p-1 mb-6 border border-white/30">
+        <div className="w-full sm:w-auto flex overflow-x-auto bg-white/20 backdrop-blur-md rounded-2xl sm:rounded-full p-1 mb-4 sm:mb-6 border border-white/30">
           {categories.map((category) => {
             const isSelected = selectedCategory === category;
             return (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-6 py-2 rounded-full font-label-sm tracking-[0.1em] text-[11px] font-bold transition-colors ${
+                className={`shrink-0 px-4 sm:px-6 py-2 rounded-full font-label-sm tracking-[0.08em] text-[10px] sm:text-[11px] font-bold transition-colors ${
                   isSelected
                     ? 'bg-white text-on-surface'
                     : 'text-white hover:bg-white/10'

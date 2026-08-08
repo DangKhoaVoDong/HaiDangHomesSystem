@@ -78,6 +78,8 @@ public class BookingService : IBookingService
         string? guestIdCardNumber,
         string? guestAddress)
     {
+        checkIn = DateTime.SpecifyKind(checkIn.Date, DateTimeKind.Utc);
+        checkOut = DateTime.SpecifyKind(checkOut.Date, DateTimeKind.Utc);
         // Validate room exists and is available
         var room = await _roomRepository.GetByIdWithDetailsAsync(roomId);
         if (room == null)
@@ -127,7 +129,7 @@ public class BookingService : IBookingService
         {
             Id = Guid.NewGuid(),
             BookingCode = bookingCode,
-            UserId = userId ?? Guid.Empty,
+            UserId = userId,
             RoomId = roomId,
             CheckInDate = checkIn,
             CheckOutDate = checkOut,
@@ -148,7 +150,26 @@ public class BookingService : IBookingService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _bookingRepository.AddAsync(booking);
+        try
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            // Re-check inside a serializable transaction. This closes the race
+            // between the initial availability query and the insert.
+            if (!await _bookingRepository.IsRoomAvailableAsync(roomId, checkIn, checkOut))
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new BookingResult(false, Error: "Room is no longer available for selected dates");
+            }
+
+            await _bookingRepository.AddAsync(booking);
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return new BookingResult(false, Error: "The room was just requested by another guest. Please try again.");
+        }
 
         // Send pending booking email to guest
         var property = await _unitOfWork.Properties.GetByIdAsync(room.PropertyId);
@@ -156,7 +177,7 @@ public class BookingService : IBookingService
         var guestName = guestFullName;
 
         // If user is logged in, use their info
-        if (userId.HasValue && userId.Value != Guid.Empty)
+        if (userId.HasValue)
         {
             var user = await _userRepository.GetByIdAsync(userId.Value);
             if (user != null && !user.IsGuest)
@@ -166,7 +187,8 @@ public class BookingService : IBookingService
             }
         }
 
-        if (!string.IsNullOrEmpty(guestEmailToSend))
+        // Email notifications are intentionally disabled for the request-review flow.
+        if (false && !string.IsNullOrEmpty(guestEmailToSend))
         {
             try
             {
@@ -213,14 +235,13 @@ public class BookingService : IBookingService
         }
 
         booking.Status = newStatus;
+        booking.AdminNote = cancellationReason;
         
         switch (newStatus)
         {
             case BookingStatus.Confirmed:
-                booking.PaymentStatus = PaymentStatus.Paid;
-                booking.PaidAt = DateTime.UtcNow;
                 // Send confirmation email
-                await SendBookingConfirmationEmailAsync(booking);
+                // Admin decisions are stored for internal review; no email is sent.
                 break;
                 
             case BookingStatus.CheckedIn:
@@ -235,7 +256,6 @@ public class BookingService : IBookingService
                 
             case BookingStatus.Cancelled:
                 booking.CancellationReason = cancellationReason;
-                booking.PaymentStatus = PaymentStatus.Refunded;
                 break;
         }
 
@@ -251,7 +271,7 @@ public class BookingService : IBookingService
         int pointsEarned = 0;
 
         // Apply loyalty discount for registered users only
-        if (userId.HasValue && userId.Value != Guid.Empty)
+        if (userId.HasValue)
         {
             // Note: User lookup needs to be done before calling this method
             // This is a simplified version
@@ -264,12 +284,12 @@ public class BookingService : IBookingService
     public async Task ProcessLoyaltyPointsAsync(Guid bookingId)
     {
         var booking = await _bookingRepository.GetByIdAsync(bookingId);
-        if (booking == null || booking.UserId == Guid.Empty)
+        if (booking?.UserId is null)
         {
             return;
         }
 
-        var user = await _userRepository.GetByIdAsync(booking.UserId);
+        var user = await _userRepository.GetByIdAsync(booking.UserId.Value);
         if (user == null || user.IsGuest)
         {
             return;
@@ -297,12 +317,12 @@ public class BookingService : IBookingService
         var property = await _unitOfWork.Properties.GetByIdAsync(room.PropertyId);
         if (property == null) return;
 
-        var email = booking.UserId != Guid.Empty 
-            ? (await _userRepository.GetByIdAsync(booking.UserId))?.Email 
+        var email = booking.UserId.HasValue
+            ? (await _userRepository.GetByIdAsync(booking.UserId.Value))?.Email
             : booking.GuestEmail;
             
-        var name = booking.UserId != Guid.Empty 
-            ? (await _userRepository.GetByIdAsync(booking.UserId))?.FullName 
+        var name = booking.UserId.HasValue
+            ? (await _userRepository.GetByIdAsync(booking.UserId.Value))?.FullName
             : booking.GuestFullName;
 
         if (string.IsNullOrEmpty(email)) return;
@@ -337,7 +357,7 @@ public class BookingService : IBookingService
     private static string GenerateBookingCode()
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd");
-        var random = new Random().Next(1000, 9999);
+        var random = System.Security.Cryptography.RandomNumberGenerator.GetInt32(1000, 10000);
         return $"HD{timestamp}{random}";
     }
 }

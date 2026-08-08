@@ -70,10 +70,17 @@ public record PropertyListDto(
     Guid Id,
     string Name,
     string? Description,
+    Guid CategoryId,
     string CategoryName,
+    bool CategoryAllowsRooms,
     string Address,
     string? City,
+    string? District,
+    string? Ward,
+    double? Latitude,
+    double? Longitude,
     string? ThumbnailUrl,
+    bool IsActive,
     bool IsFeatured,
     string? BrandName,
     int TotalRooms,
@@ -131,6 +138,7 @@ public record RoomDto(
     int BedCount,
     int BathroomCount,
     int SizeInSqm,
+    int TotalUnits,
     bool IsActive,
     bool IsAvailable,
     List<RoomImageDto> Images,
@@ -144,6 +152,7 @@ public record RoomListDto(
     int RoomNumber,
     decimal PricePerNight,
     int MaxOccupancy,
+    int TotalUnits,
     bool IsAvailable,
     string? PrimaryImageUrl);
 
@@ -158,6 +167,7 @@ public record CreateRoomRequest(
     int BedCount,
     int BathroomCount,
     int SizeInSqm,
+    int TotalUnits = 1,
     List<string>? ImageUrls = null,
     List<Guid>? AmenityIds = null);
 
@@ -172,6 +182,7 @@ public record UpdateRoomRequest(
     int BedCount,
     int BathroomCount,
     int SizeInSqm,
+    int? TotalUnits,
     bool IsActive,
     bool IsAvailable);
 
@@ -191,7 +202,7 @@ public record RoomAvailabilityDto(
 public record BookingDto(
     Guid Id,
     string BookingCode,
-    Guid UserId,
+    Guid? UserId,
     string UserName,
     string? UserEmail,
     Guid RoomId,
@@ -204,12 +215,13 @@ public record BookingDto(
     decimal DiscountAmount,
     decimal FinalPrice,
     BookingStatus Status,
-    PaymentStatus PaymentStatus,
-    string? QrCode,
-    DateTime? PaidAt,
     DateTime? CheckedInAt,
     DateTime? CompletedAt,
-    string? SpecialRequests);
+    string? SpecialRequests,
+    string? GuestFullName,
+    string? GuestEmail,
+    string? GuestPhone,
+    string? AdminNote);
 
 public record BookingListDto(
     Guid Id,
@@ -222,7 +234,6 @@ public record BookingListDto(
     BookingStatus Status);
 
 public record CreateBookingRequest(
-    Guid? UserId,
     Guid RoomId,
     DateTime CheckInDate,
     DateTime CheckOutDate,
@@ -235,9 +246,7 @@ public record CreateBookingRequest(
     string? GuestIdCardNumber,
     string? GuestAddress);
 
-public record UpdateBookingStatusRequest(
-    Guid BookingId,
-    BookingStatus NewStatus);
+public record UpdateBookingStatusRequest(BookingStatus NewStatus, string? AdminNote);
 
 // Category DTOs
 public record CategoryDto(
@@ -247,6 +256,7 @@ public record CategoryDto(
     string? IconUrl,
     int DisplayOrder,
     bool IsActive,
+    bool AllowsRooms,
     List<CategoryTranslationDto>? Translations);
 
 public record CreateCategoryRequest(
@@ -279,7 +289,8 @@ public record CreateAdminCategoryRequest(
     string? DescriptionVi,
     string? DescriptionEn,
     string? IconUrl,
-    int DisplayOrder);
+    int DisplayOrder,
+    bool AllowsRooms);
 
 public record UpdateAdminCategoryRequest(
     Guid Id,
@@ -289,7 +300,8 @@ public record UpdateAdminCategoryRequest(
     string? DescriptionEn,
     string? IconUrl,
     int DisplayOrder,
-    bool IsActive);
+    bool IsActive,
+    bool AllowsRooms);
 
 // Admin: full Category DTO (Vi + En translations + audit)
 public record CategoryAdminDto(
@@ -301,6 +313,7 @@ public record CategoryAdminDto(
     string? IconUrl,
     int DisplayOrder,
     bool IsActive,
+    bool AllowsRooms,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
 
@@ -318,24 +331,6 @@ public record CreateAmenityRequest(
     string? Icon,
     string? Description,
     int DisplayOrder);
-
-// Payment DTOs
-public record PaymentDto(
-    Guid Id,
-    Guid BookingId,
-    decimal Amount,
-    string Currency,
-    PaymentStatus Status,
-    string? PaymentMethod,
-    string? TransactionId,
-    string? VnpayTransactionId,
-    DateTime? PaidAt);
-
-public record PaymentResultDto(
-    bool Success,
-    string? PaymentUrl,
-    string? TransactionId,
-    string? ErrorMessage);
 
 // Search DTOs
 public record SearchRequest(

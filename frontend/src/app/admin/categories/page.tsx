@@ -24,6 +24,7 @@ interface CategoryAdmin {
   iconUrl?: string | null;
   displayOrder: number;
   isActive: boolean;
+  allowsRooms: boolean;
   createdAt: string;
   updatedAt?: string | null;
 }
@@ -36,6 +37,7 @@ const emptyForm = {
   iconUrl: '',
   displayOrder: 0,
   isActive: true,
+  allowsRooms: true,
 };
 
 export default function AdminCategoriesPage() {
@@ -60,6 +62,7 @@ export default function AdminCategoriesPage() {
       descriptionEn: data.descriptionEn || undefined,
       iconUrl: data.iconUrl || undefined,
       displayOrder: data.displayOrder,
+      allowsRooms: data.allowsRooms,
     }),
     onSuccess: (res: any) => {
       if (res?.success === false) {
@@ -85,6 +88,7 @@ export default function AdminCategoriesPage() {
         iconUrl: data.iconUrl || undefined,
         displayOrder: data.displayOrder,
         isActive: data.isActive,
+        allowsRooms: data.allowsRooms,
       }),
     onSuccess: (res: any) => {
       if (res?.success === false) {
@@ -130,6 +134,7 @@ export default function AdminCategoriesPage() {
       iconUrl: c.iconUrl ?? '',
       displayOrder: c.displayOrder ?? 0,
       isActive: c.isActive ?? true,
+      allowsRooms: c.allowsRooms ?? true,
     });
     setShowForm(true);
   };
@@ -160,8 +165,8 @@ export default function AdminCategoriesPage() {
   const items = categoriesQuery.data ?? [];
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Tag className="w-6 h-6 text-[#D24A15]" />
           <div>
@@ -169,7 +174,7 @@ export default function AdminCategoriesPage() {
             <p className="text-sm text-gray-500">Thêm, sửa, xoá các loại hình cho căn nhà</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => categoriesQuery.refetch()}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -203,6 +208,7 @@ export default function AdminCategoriesPage() {
                 <th className="px-4 py-3">Tên (Vi)</th>
                 <th className="px-4 py-3">Tên (En)</th>
                 <th className="px-4 py-3">Thứ tự</th>
+                <th className="px-4 py-3">Quản lý phòng</th>
                 <th className="px-4 py-3">Trạng thái</th>
                 <th className="px-4 py-3 text-right">Thao tác</th>
               </tr>
@@ -213,6 +219,9 @@ export default function AdminCategoriesPage() {
                   <td className="px-4 py-3 font-medium">{c.nameVi || '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{c.nameEn || '—'}</td>
                   <td className="px-4 py-3">{c.displayOrder ?? 0}</td>
+                  <td className="px-4 py-3">
+                    {c.allowsRooms ? 'Cho phép thêm phòng' : 'Cho thuê nguyên căn'}
+                  </td>
                   <td className="px-4 py-3">
                     {c.isActive ? (
                       <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Hoạt động</span>
@@ -258,7 +267,7 @@ export default function AdminCategoriesPage() {
             </div>
 
             <form onSubmit={submit} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tên (Vi) *
@@ -287,7 +296,7 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mô tả (Vi)
@@ -314,7 +323,7 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Thứ tự hiển thị
@@ -351,6 +360,21 @@ export default function AdminCategoriesPage() {
                   Đang hoạt động
                 </label>
               )}
+
+              <label className="flex items-start gap-2 rounded-lg border border-gray-200 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.allowsRooms}
+                  onChange={(e) => setForm({ ...form, allowsRooms: e.target.checked })}
+                  className="mt-0.5 rounded border-gray-300"
+                />
+                <span>
+                  <span className="block font-medium text-gray-800">Cho phép thêm phòng</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Bỏ chọn nếu loại hình được cho thuê nguyên căn, không chia sẻ hoặc đăng thêm phòng riêng.
+                  </span>
+                </span>
+              </label>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 mt-2 pt-4">
                 <button

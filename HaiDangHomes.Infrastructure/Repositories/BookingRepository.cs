@@ -20,7 +20,6 @@ public class BookingRepository : IBookingRepository
             .Include(b => b.User)
             .Include(b => b.Room)
                 .ThenInclude(r => r.Property)
-            .Include(b => b.Payments)
             .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
     }
 
@@ -118,15 +117,23 @@ public class BookingRepository : IBookingRepository
 
     public async Task<bool> IsRoomAvailableAsync(Guid roomId, DateTime checkIn, DateTime checkOut, CancellationToken cancellationToken = default)
     {
-        var overlappingBookings = await _context.Bookings
+        checkIn = DateTime.SpecifyKind(checkIn, DateTimeKind.Utc);
+        checkOut = DateTime.SpecifyKind(checkOut, DateTimeKind.Utc);
+        var totalUnits = await _context.Rooms
+            .Where(r => r.Id == roomId && r.IsActive && r.IsAvailable)
+            .Select(r => r.TotalUnits)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (totalUnits < 1) return false;
+
+        var occupiedUnits = await _context.Bookings
             .Where(b => b.RoomId == roomId &&
                 b.Status != Domain.Enums.BookingStatus.Cancelled &&
                 b.Status != Domain.Enums.BookingStatus.Refunded &&
                 b.CheckInDate < checkOut &&
                 b.CheckOutDate > checkIn)
-            .AnyAsync(cancellationToken);
+            .CountAsync(cancellationToken);
 
-        return !overlappingBookings;
+        return occupiedUnits < totalUnits;
     }
 
     public async Task<List<Booking>> GetBookingsInRangeAsync(
@@ -152,9 +159,10 @@ public class BookingRepository : IBookingRepository
         var query = _context.Bookings
             .Include(b => b.User)
             .Include(b => b.Room)
+                .ThenInclude(r => r.Property)
             .Where(b =>
-                b.CheckInDate >= startDate &&
-                b.CheckInDate <= endDate &&
+                b.CheckInDate < endDate &&
+                b.CheckOutDate > startDate &&
                 b.Status != Domain.Enums.BookingStatus.Cancelled &&
                 b.Status != Domain.Enums.BookingStatus.Refunded);
 

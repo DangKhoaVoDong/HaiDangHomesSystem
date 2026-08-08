@@ -148,6 +148,7 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.User)
                 .WithMany(u => u.Bookings)
                 .HasForeignKey(e => e.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
                 
             entity.HasOne(e => e.Room)

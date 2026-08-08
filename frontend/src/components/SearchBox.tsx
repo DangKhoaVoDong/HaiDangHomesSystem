@@ -321,14 +321,14 @@ export function SearchBox() {
     <form
       ref={containerRef}
       onSubmit={handleSearch}
-      className="bg-white rounded-full shadow-xl border border-gray-200 w-full max-w-4xl mx-auto relative"
+      className="bg-white rounded-3xl md:rounded-full shadow-xl border border-gray-200 w-full max-w-4xl mx-auto relative"
     >
       <div className="flex flex-col md:flex-row items-stretch md:divide-x divide-gray-200">
         {/* Where */}
         <button
           type="button"
           onClick={() => setOpenPanel(openPanel === 'location' ? null : 'location')}
-          className={`flex-[3] flex items-center gap-3 text-left px-6 py-3 md:py-4 rounded-t-3xl md:rounded-l-full md:rounded-tr-none transition-colors ${
+          className={`flex-[3] flex items-center gap-3 text-left px-4 sm:px-6 py-3 md:py-4 rounded-t-3xl md:rounded-l-full md:rounded-tr-none transition-colors ${
             openPanel === 'location' ? 'bg-gray-100' : 'hover:bg-gray-50'
           }`}
         >
@@ -419,7 +419,7 @@ export function SearchBox() {
         <button
           type="button"
           onClick={() => setOpenPanel(openPanel === 'guests' ? null : 'guests')}
-          className={`flex-[3] flex items-center gap-3 text-left px-6 py-3 md:py-4 transition-colors ${
+          className={`flex-[3] flex items-center gap-3 text-left px-4 sm:px-6 py-3 md:py-4 transition-colors ${
             openPanel === 'guests' ? 'bg-gray-100' : 'hover:bg-gray-50'
           }`}
         >
@@ -437,10 +437,10 @@ export function SearchBox() {
         </button>
 
         {/* Search button */}
-        <div className="flex items-center justify-end px-4 py-3 md:py-2">
+        <div className="flex items-center px-4 py-3 md:py-2">
           <button
             type="submit"
-            className="flex items-center gap-2 bg-[#D24A15] hover:bg-[#b03d10] text-white font-medium rounded-full px-5 py-3 transition-colors shadow-md"
+            className="w-full md:w-auto justify-center flex items-center gap-2 bg-[#D24A15] hover:bg-[#b03d10] text-white font-medium rounded-full px-5 py-3 transition-colors shadow-md"
           >
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline text-sm">{t.search}</span>

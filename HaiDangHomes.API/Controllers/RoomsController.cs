@@ -76,7 +76,8 @@ public class RoomsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await _mediator.Send(new GetRoomsForManagementQuery(propertyId, status, page, pageSize));
+        var result = await _mediator.Send(new GetRoomsForManagementQuery(
+            GetCurrentUserId(), User.IsInRole("Admin"), propertyId, status, page, pageSize));
         return Ok(ApiResponse<SearchResult<RoomManagementDto>>.SuccessResponse(result));
     }
 
@@ -85,6 +86,8 @@ public class RoomsController : ControllerBase
     public async Task<ActionResult<ApiResponse<RoomDto>>> Create([FromBody] CreateRoomRequest request)
     {
         var command = new CreateRoomCommand(
+            GetCurrentUserId(),
+            User.IsInRole("Admin"),
             request.Name,
             request.Description,
             request.PropertyId,
@@ -95,6 +98,7 @@ public class RoomsController : ControllerBase
             request.BedCount,
             request.BathroomCount,
             request.SizeInSqm,
+            request.TotalUnits,
             request.ImageUrls,
             request.AmenityIds);
 
@@ -114,6 +118,8 @@ public class RoomsController : ControllerBase
     {
         var command = new UpdateRoomCommand(
             id,
+            GetCurrentUserId(),
+            User.IsInRole("Admin"),
             request.Name,
             request.Description,
             request.RoomNumber,
@@ -123,6 +129,7 @@ public class RoomsController : ControllerBase
             request.BedCount,
             request.BathroomCount,
             request.SizeInSqm,
+            request.TotalUnits,
             request.IsActive,
             request.IsAvailable);
 
@@ -138,11 +145,17 @@ public class RoomsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult<ApiResponse>> Delete(Guid id)
     {
-        var result = await _mediator.Send(new DeleteRoomCommand(id));
+        var result = await _mediator.Send(new DeleteRoomCommand(
+            id, GetCurrentUserId(), User.IsInRole("Admin")));
 
         if (!result.IsSuccess)
             return BadRequest(ApiResponse.ErrorResponse(result.Error ?? "Failed to delete room"));
 
         return Ok(ApiResponse.SuccessResponse("Room deleted successfully"));
+    }
+    private Guid GetCurrentUserId()
+    {
+        var value = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(value, out var id) ? id : Guid.Empty;
     }
 }

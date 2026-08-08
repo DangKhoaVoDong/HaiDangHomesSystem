@@ -6,6 +6,8 @@ namespace HaiDangHomes.Domain.Interfaces;
 public interface IActivityLogRepository
 {
     Task<List<ActivityLog>> GetLogsAsync(
+        Guid actorUserId,
+        bool isAdmin,
         int page,
         int pageSize,
         string? entityType = null,

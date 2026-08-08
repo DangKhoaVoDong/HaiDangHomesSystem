@@ -8,7 +8,6 @@ Backend (.NET 8 API)  → Render
 Database (PostgreSQL) → NeonDB
 Images / Files        → Cloudinary
 Email                 → Resend
-Payments              → PayOS
 Caching (optional)    → Upstash Redis
 ```
 
@@ -25,7 +24,6 @@ Free accounts needed:
 | [Render](https://render.com) | Backend hosting | 7 days sleep after inactivity |
 | [Vercel](https://vercel.com) | Frontend hosting | Unlimited deployments |
 | [Cloudinary](https://cloudinary.com) | Image storage + CDN | 25 GB storage |
-| [PayOS](https://payos.vn) | Payment gateway | Per-transaction fee |
 | [Resend](https://resend.com) | Email sending | 3,000 emails/month |
 
 ---
@@ -162,12 +160,6 @@ Cloudinary__ApiSecret = 7L1BUJ+ISniSQGN_Mr8KzH3PoQXI
 ```
 
 ```
-# PayOS (from payos.vn — optional if not using payments)
-PayOS__ClientId = YOUR_PAYOS_CLIENT_ID
-PayOS__ApiKey = YOUR_PAYOS_API_KEY
-PayOS__ChecksumKey = YOUR_PAYOS_CHECKSUM_KEY
-PayOS__ReturnUrl = https://YOUR_APP.vercel.app/booking/success
-PayOS__CancelUrl = https://YOUR_APP.vercel.app/booking/failed
 ```
 
 ```
@@ -182,7 +174,7 @@ App__CompanyName = HaiDang Homes
 App__Url = https://YOUR_APP.vercel.app
 ```
 
-> **Important:** For sensitive values (Jwt__Secret, PayOS keys, Cloudinary__ApiSecret, Resend__ApiKey), click **Encrypt** before saving.
+> **Important:** For sensitive values (Jwt__Secret, Cloudinary__ApiSecret, Resend__ApiKey), click **Encrypt** before saving.
 
 ### 4.3 — Wait for Deployment
 
@@ -237,8 +229,6 @@ After adding env vars, go to **Deployments** → click **...** → **Redeploy** 
 Once Vercel gives you the final URL, go back to Render → Environment and update:
 
 ```
-PayOS__ReturnUrl = https://YOUR_APP_NAME.vercel.app/booking/success
-PayOS__CancelUrl = https://YOUR_APP_NAME.vercel.app/booking/failed
 App__Url = https://YOUR_APP_NAME.vercel.app
 ```
 
@@ -306,11 +296,10 @@ Render will auto-rebuild and apply the migration.
 - [ ] Property listings display
 - [ ] Booking flow works
 
-### Payment Tests (if PayOS enabled)
-- [ ] Create booking
-- [ ] Click Pay → redirects to PayOS
-- [ ] Complete payment → redirects to `/booking/success`
-- [ ] Booking status updates to **Confirmed**
+### Booking request tests
+- [ ] Submit guest name, phone and email
+- [ ] The request is stored with status **Pending**
+- [ ] The guest receives the room-checking email
 
 ---
 
@@ -332,9 +321,6 @@ AllowedOrigins = https://YOUR_APP_NAME.vercel.app,http://localhost:3000
 ### Database connection fails
 - Ensure `?sslmode=require` is in the connection string
 - Check NeonDB project is not paused (Neon auto-pauses after 5 days of inactivity — log in to Neon dashboard to wake it up)
-
-### PayOS webhook not working
-Render free tier sleeps — webhook calls may fail. On the success page, call `GET /api/payments/check-status/{orderCode}` to verify payment.
 
 ### Build fails on Render
 Check Docker logs in Render dashboard. Most common cause: missing or wrong `DATABASE_URL`.
@@ -371,5 +357,4 @@ Settings → Custom Domains → Add domain → Add DNS records.
 | Vercel | Hobby | $0 |
 | Cloudinary | Free | $0 |
 | Resend | Free | $0 |
-| PayOS | Per-transaction | ~1-2% |
 | **Total** | | **~$0** |

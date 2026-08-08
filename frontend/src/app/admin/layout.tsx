@@ -10,7 +10,7 @@ export default function AdminLayout({
     <RoleGuard allowed={['Admin']}>
       <div className="min-h-screen bg-[#fcf9f8]">
         <AdminSidebar />
-        <main className="ml-64 min-h-screen">{children}</main>
+        <main className="pt-16 lg:pt-0 lg:ml-64 min-h-screen">{children}</main>
       </div>
     </RoleGuard>
   );

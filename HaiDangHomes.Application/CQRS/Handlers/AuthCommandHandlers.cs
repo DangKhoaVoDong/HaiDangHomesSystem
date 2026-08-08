@@ -125,7 +125,7 @@ public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result>
 
     public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
-        await _authService.LogoutAsync(Guid.Empty, request.RefreshToken);
+        await _authService.LogoutAsync(request.UserId, request.RefreshToken);
         return Result.Success();
     }
 }

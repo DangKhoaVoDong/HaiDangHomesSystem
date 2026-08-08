@@ -25,31 +25,15 @@ import {
   X,
   Building2,
 } from 'lucide-react';
-import { roomsApi, getApiData, getApiError, isApiSuccess } from '@/lib/api';
+import { activityLogsApi, roomsApi, getApiData, getApiError, isApiSuccess } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth';
+import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
 
 const navItems = [
   { icon: Building2, label: 'Quản lý căn nhà', active: false, href: '/manager/properties' },
   { icon: Bed, label: 'Quản lý phòng', active: true, href: '/manager' },
   { icon: Calendar, label: 'Lịch đặt phòng', active: false, href: '/manager/bookings' },
   { icon: Plus, label: 'Đăng tin mới', active: false, href: '/manager/rooms/new' },
-];
-
-const recentActivities = [
-  {
-    color: 'bg-[#D24A15]',
-    text: 'Phòng Deluxe - Savvy Hai Bà Trưng vừa được đặt cho ngày 15/10 - 18/10.',
-    time: '10 phút trước',
-  },
-  {
-    color: 'bg-rose-600',
-    text: 'Cập nhật trạng thái Signature Valley Suite thành Đang sửa chữa.',
-    time: '2 giờ trước',
-  },
-  {
-    color: 'bg-[#D24A15]',
-    text: 'Tin đăng mới Penthouse Ocean View đã được duyệt.',
-    time: 'Hôm qua',
-  },
 ];
 
 // RoomOperationalStatus enum (backend): Available=1, Occupied=2, Maintenance=3, CheckOutSoon=4, Blocked=5
@@ -73,14 +57,23 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('vi-VN').format(price);
 }
 
-export default function ManagerPage() {
+function formatRelativeTime(value: string): string {
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (elapsedSeconds < 60) return 'Vừa xong';
+  if (elapsedSeconds < 3600) return `${Math.floor(elapsedSeconds / 60)} phút trước`;
+  if (elapsedSeconds < 86400) return `${Math.floor(elapsedSeconds / 3600)} giờ trước`;
+  return `${Math.floor(elapsedSeconds / 86400)} ngày trước`;
+}
+
+export function RoomManagementView({ adminMode = false }: { adminMode?: boolean }) {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRoom, setEditingRoom] = useState<any | null>(null);
   const [deletingRoom, setDeletingRoom] = useState<any | null>(null);
 
   const { data: roomsResponse, isLoading } = useQuery({
-    queryKey: ['rooms-management'],
+    queryKey: ['rooms-management', userId],
     queryFn: async () => {
       const res = await roomsApi.getForManagement({ pageSize: 100 });
       return getApiData(res);
@@ -89,6 +82,15 @@ export default function ManagerPage() {
 
   const rooms = roomsResponse?.items ?? [];
 
+  const activityQuery = useQuery({
+    queryKey: ['activity-logs', userId],
+    queryFn: async () => {
+      const response = await activityLogsApi.getRecent(5);
+      return getApiData(response) ?? [];
+    },
+    enabled: !!userId,
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string; data: any }) =>
       roomsApi.update(payload.id, payload.data),
@@ -96,6 +98,7 @@ export default function ManagerPage() {
       if (getApiData(res)) {
         toast.success('Cập nhật phòng thành công');
         queryClient.invalidateQueries({ queryKey: ['rooms-management'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
         queryClient.invalidateQueries({ queryKey: ['properties'] });
         setEditingRoom(null);
       } else {
@@ -118,11 +121,13 @@ export default function ManagerPage() {
         bedCount: room.bedCount,
         bathroomCount: room.bathroomCount,
         sizeInSqm: room.sizeInSqm,
+        totalUnits: room.totalUnits,
         isActive: true,
         isAvailable: !room.isAvailable,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms-management'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
     },
   });
 
@@ -132,6 +137,7 @@ export default function ManagerPage() {
       if (isApiSuccess(res)) {
         toast.success('Đã xóa phòng');
         queryClient.invalidateQueries({ queryKey: ['rooms-management'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
         queryClient.invalidateQueries({ queryKey: ['properties'] });
         setDeletingRoom(null);
       } else {
@@ -159,7 +165,7 @@ export default function ManagerPage() {
   return (
     <div className="min-h-screen bg-[#fcf9f8] flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex flex-col z-50">
+      {!adminMode && <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50">
         <div className="px-6 py-8 border-b border-gray-200">
           <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDangHomes</h1>
           <p className="text-sm text-gray-500 mt-1">Luxury Manager</p>
@@ -187,13 +193,14 @@ export default function ManagerPage() {
             <HelpCircle className="w-5 h-5" />
             <span className="text-sm">Support</span>
           </button>
+          <ManagerLogoutButton />
         </div>
-      </aside>
+      </aside>}
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen ${adminMode ? '' : 'lg:ml-64'}`}>
         {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 px-16 py-4">
+        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 lg:px-10 xl:px-16 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button className="md:hidden text-gray-500">
@@ -227,7 +234,7 @@ export default function ManagerPage() {
         </header>
 
         {/* Dashboard Content */}
-        <main className="flex-1 p-6 md:p-16 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-4 sm:p-6 lg:p-10 xl:p-16 max-w-7xl mx-auto w-full">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-4">
             <div>
@@ -237,7 +244,7 @@ export default function ManagerPage() {
               <p className="text-gray-600">Quản lý danh sách phòng và theo dõi tình trạng hiện tại.</p>
             </div>
             <Link
-              href="/manager/rooms/new"
+              href={adminMode ? '/admin/rooms/new' : '/manager/rooms/new'}
               className="bg-[#D24A15] hover:bg-[#b03d10] text-white py-3 px-6 rounded-xl flex items-center gap-2 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -313,17 +320,37 @@ export default function ManagerPage() {
             {/* Recent Activity */}
             <div className="lg:col-span-8 bg-white rounded-2xl p-8 border border-gray-200 hover:shadow-lg transition-all">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Hoạt động gần đây</h3>
-              <div className="space-y-6">
-                {recentActivities.map((activity, index) => (
-                  <div key={index} className={`flex gap-4 items-start pb-6 ${index < 2 ? 'border-b border-gray-200' : ''}`}>
-                    <div className={`w-2 h-2 rounded-full ${activity.color} mt-2 flex-shrink-0`} />
-                    <div className="flex-1">
-                      <p className="text-gray-900">{activity.text}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+              {activityQuery.isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#D24A15]" />
+                </div>
+              ) : (activityQuery.data?.length ?? 0) === 0 ? (
+                <p className="py-12 text-center text-sm text-gray-500">Chưa có hoạt động nào.</p>
+              ) : (
+                <div className="space-y-6">
+                  {activityQuery.data!.map((activity: any, index: number) => (
+                    <div
+                      key={activity.id}
+                      className={`flex gap-4 items-start pb-6 ${
+                        index < activityQuery.data!.length - 1 ? 'border-b border-gray-200' : ''
+                      }`}
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          activity.logType === 2 ? 'bg-amber-500'
+                            : activity.logType === 4 ? 'bg-rose-600'
+                              : activity.logType === 6 ? 'bg-blue-500'
+                                : 'bg-[#D24A15]'
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <p className="text-gray-900">{activity.details || `${activity.action} ${activity.entityType}`}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatRelativeTime(activity.createdAt)}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -348,7 +375,7 @@ export default function ManagerPage() {
                       Hãy tạo property trước, sau đó thêm phòng mới.
                     </p>
                     <Link
-                      href="/manager/rooms/new"
+                      href={adminMode ? '/admin/rooms/new' : '/manager/rooms/new'}
                       className="inline-flex items-center gap-2 bg-[#D24A15] hover:bg-[#b03d10] text-white py-2 px-4 rounded-lg text-sm transition-colors"
                     >
                       <Plus className="w-4 h-4" />
@@ -744,4 +771,8 @@ function ConfirmDeleteDialog({
       </div>
     </div>
   );
+}
+
+export default function ManagerPage() {
+  return <RoomManagementView />;
 }

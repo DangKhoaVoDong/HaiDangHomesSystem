@@ -12,26 +12,61 @@ using HaiDangHomes.Infrastructure;
 using HaiDangHomes.Infrastructure.Persistence;
 using MediatR;
 using StackExchange.Redis;
+using HaiDangHomes.API.Infrastructure;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Console logging works consistently in local development, containers and
+// restricted Windows accounts without requiring Event Log permissions.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // Add Infrastructure services (registers ApplicationDbContext, IConnectionMultiplexer, repositories, etc.)
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Configure HttpClient for PayOS
-builder.Services.AddHttpClient("PayOS", client =>
-{
-    client.BaseAddress = new Uri("https://api.payos.vn/");
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
-
 // Add Application services (registers MediatR, FluentValidation)
 builder.Services.AddApplication();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddProblemDetails();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("booking", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 // JWT Authentication
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) ||
+    jwtSecret.Length < 32 ||
+    jwtSecret.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret must be provided through configuration and contain at least 32 characters.");
+}
+
 var jwtSettings = new JwtSettings
 {
-    Secret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatShouldBeAtLeast32Characters!",
+    Secret = jwtSecret,
     Issuer = builder.Configuration["Jwt:Issuer"] ?? "HaiDangHomes",
     Audience = builder.Configuration["Jwt:Audience"] ?? "HaiDangHomesAPI",
     ExpiryInMinutes = int.Parse(builder.Configuration["Jwt:ExpiryInMinutes"] ?? "60"),
@@ -137,6 +172,7 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(healthCheckConn, name: "postgresql");
 
 var app = builder.Build();
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -149,7 +185,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -168,7 +206,8 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "An error occurred while migrating/seeding the database");
+        logger.LogCritical(ex, "Database migration or seeding failed; application startup aborted");
+        throw;
     }
 }
 

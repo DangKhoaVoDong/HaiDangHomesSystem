@@ -11,7 +11,6 @@ Hệ thống đặt phòng trực tuyến được xây dựng với kiến trú
 - **Cache**: Redis
 - **Storage**: AWS S3
 - **Email**: Resend
-- **Payment**: PayOS
 
 ### Frontend
 - **Framework**: Next.js 14 (React)
@@ -44,11 +43,11 @@ HaiDangHomesSystem/
 - Bộ lọc tìm kiếm
 - Chi tiết phòng với gallery
 
-### 3. Đặt phòng & Thanh toán
+### 3. Yêu cầu đặt phòng
 - Kiểm tra phòng trống (Chống overbooking)
-- Tính hóa đơn tự động
+- Lưu thông tin liên hệ của khách
 - Booking Lifecycle
-- Tích hợp PayOS
+- Gửi email thông báo đang kiểm tra phòng
 
 ### 4. Email Automation
 - Gửi hóa đơn tự động
@@ -89,13 +88,6 @@ dotnet restore
   },
   "Resend": {
     "ApiKey": "re_your-api-key"
-  },
-  "PayOS": {
-    "ClientId": "YOUR_PAYOS_CLIENT_ID",
-    "ApiKey": "YOUR_PAYOS_API_KEY",
-    "ChecksumKey": "YOUR_PAYOS_CHECKSUM_KEY",
-    "ReturnUrl": "https://your-domain.com/booking/success",
-    "CancelUrl": "https://your-domain.com/booking/failed"
   }
 }
 ```
@@ -154,12 +146,6 @@ npm run dev
 - GET /api/bookings/{bookingCode}
 - GET /api/bookings/my-bookings
 - PUT /api/bookings/{bookingId}/status
-
-### Payments
-- POST /api/payments/create-payment-url
-- GET /api/payments/payos-return
-- POST /api/payments/payos-webhook
-- GET /api/payments/check-status/{orderCode}
 
 ### Categories & Amenities
 - GET /api/categories

@@ -140,8 +140,8 @@ export default function AdminBrandsPage() {
   const items = brandsQuery.data ?? [];
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Award className="w-6 h-6 text-[#D24A15]" />
           <div>
@@ -149,7 +149,7 @@ export default function AdminBrandsPage() {
             <p className="text-sm text-gray-500">Thêm, sửa, xoá các thương hiệu của hệ thống</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => brandsQuery.refetch()}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"

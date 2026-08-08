@@ -8,6 +8,8 @@
 # Build artifacts
 **/bin/
 **/obj/
+*.log
+**/*.log
 
 # IDE
 .vs/

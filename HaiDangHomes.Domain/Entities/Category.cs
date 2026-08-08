@@ -9,6 +9,7 @@ public class Category : AuditableEntityBase<Guid>
     public string? IconUrl { get; set; }
     public int DisplayOrder { get; set; } = 0;
     public bool IsActive { get; set; } = true;
+    public bool AllowsRooms { get; set; } = true;
     
     // Navigation properties
     public virtual ICollection<Property> Properties { get; set; } = new List<Property>();

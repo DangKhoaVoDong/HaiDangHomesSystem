@@ -47,7 +47,7 @@ export default function MyBookingsPage() {
       checkOut: 'Check-out',
       total: 'Total',
       status: {
-        Pending: 'Pending Payment',
+        Pending: 'Checking room',
         Confirmed: 'Confirmed',
         CheckedIn: 'Checked In',
         Completed: 'Completed',

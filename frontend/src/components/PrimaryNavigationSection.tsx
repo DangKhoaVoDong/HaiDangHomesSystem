@@ -6,6 +6,7 @@ import { useLanguageStore } from '@/stores/language';
 import { useAuthStore } from '@/stores/auth';
 import { normalizeRole } from '@/lib/auth-shared';
 import { Menu, X, User, LogOut, Settings, Calendar, Globe } from 'lucide-react';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 const navigationItems = [
   { label: 'Đặt Phòng', href: '/properties' },
@@ -18,6 +19,7 @@ export const PrimaryNavigationSection = () => {
   const { language, setLanguage } = useLanguageStore();
   const { user, isAuthenticated, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register' | null>(null);
 
   const userRole = user ? normalizeRole(user.role as unknown as string | number) : 'Customer';
   const canAccessDashboard = userRole === 'Manager' || userRole === 'Admin';
@@ -49,7 +51,7 @@ export const PrimaryNavigationSection = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-surface border-b border-outline-variant/30">
-      <div className="flex justify-between items-center px-margin-desktop py-stack-sm w-full max-w-container-max mx-auto">
+      <div className="flex justify-between items-center px-5 sm:px-8 lg:px-12 xl:px-16 py-3 w-full max-w-container-max mx-auto">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="w-10 h-10 rounded-full border border-primary flex items-center justify-center">
@@ -66,7 +68,7 @@ export const PrimaryNavigationSection = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden xl:flex items-center gap-6">
           {navigationItems.map((item) => (
             <Link
               key={item.label}
@@ -79,7 +81,7 @@ export const PrimaryNavigationSection = () => {
         </nav>
 
         {/* Right Actions */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden xl:flex items-center gap-3">
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
@@ -146,18 +148,20 @@ export const PrimaryNavigationSection = () => {
             </div>
           ) : (
             <>
-              <Link
-                href="/login"
+              <button
+                type="button"
+                onClick={() => setAuthMode('login')}
                 className="font-label-sm border border-outline-variant px-4 py-2 rounded-full text-on-surface font-semibold hover:bg-surface-container transition-colors duration-300 whitespace-nowrap shrink-0"
               >
                 {t.login}
-              </Link>
-              <Link
-                href="/register"
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('register')}
                 className="font-label-sm border border-primary bg-primary px-4 py-2 rounded-full text-white font-semibold hover:bg-[#b03d10] hover:border-[#b03d10] transition-colors duration-300 whitespace-nowrap shrink-0"
               >
                 {t.register}
-              </Link>
+              </button>
             </>
           )}
         </div>
@@ -165,7 +169,7 @@ export const PrimaryNavigationSection = () => {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-on-surface-variant p-2"
+          className="xl:hidden text-on-surface-variant p-2 -mr-2"
           aria-label={mobileMenuOpen ? t.closeMenu : t.openMenu}
         >
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -174,8 +178,8 @@ export const PrimaryNavigationSection = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-surface shadow-xl border-t border-outline-variant/30">
-          <div className="px-margin-mobile py-stack-lg space-y-stack-sm">
+        <div className="xl:hidden fixed top-[65px] left-0 right-0 max-h-[calc(100dvh-65px)] overflow-y-auto bg-surface shadow-xl border-t border-outline-variant/30">
+          <div className="px-5 sm:px-8 py-6 space-y-4">
             {navigationItems.map((item) => (
               <Link
                 key={item.label}
@@ -219,26 +223,27 @@ export const PrimaryNavigationSection = () => {
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => { setMobileMenuOpen(false); setAuthMode('login'); }}
                     className="block font-label-md font-semibold text-on-surface"
                   >
                     {t.login}
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setMobileMenuOpen(false)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMobileMenuOpen(false); setAuthMode('register'); }}
                     className="block font-label-md font-semibold text-primary"
                   >
                     {t.register}
-                  </Link>
+                  </button>
                 </>
               )}
             </div>
           </div>
         </div>
       )}
+      {authMode && <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} />}
     </header>
   );
 };

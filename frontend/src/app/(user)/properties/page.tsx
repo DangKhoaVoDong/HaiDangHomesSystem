@@ -359,11 +359,11 @@ function PropertiesContent() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 flex gap-8">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 py-6 sm:py-8 flex gap-8 min-w-0">
         {/* Left Column (Results) */}
-        <div className="flex-1 max-w-[850px]">
+        <div className="flex-1 min-w-0">
           {/* Property Type Tabs (Tất cả / Khách sạn / Villa) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 mb-6 flex items-center gap-1">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 mb-6 flex items-center gap-1 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -372,7 +372,7 @@ function PropertiesContent() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex-1 min-w-max flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-50'
@@ -413,7 +413,7 @@ function PropertiesContent() {
           </div>
 
           {/* Sorting */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-200">
             <span className="font-medium text-gray-900">
               {finalProperties.length > 0 ? finalProperties.length : propertyList.length || 12} lựa chọn
             </span>
@@ -427,11 +427,13 @@ function PropertiesContent() {
           </div>
 
           {/* Contact Banner */}
-          <div className="bg-orange-50 rounded-xl p-4 mb-6 flex items-center gap-2 text-sm text-gray-900">
-            <Phone className="w-4 h-4 text-[#D24A15]" />
-            <span className="font-medium">Đặt nhiều phòng?</span>
-            Chỉ cần gọi <a className="text-[#D24A15] font-medium underline" href="#">1900 3311</a> hoặc{' '}
-            <a className="text-[#D24A15] font-medium underline" href="#">email</a>! Đã có Haidang Home lo.
+          <div className="bg-orange-50 rounded-xl p-4 mb-6 flex items-start gap-3 text-sm text-gray-900">
+            <Phone className="w-4 h-4 mt-0.5 shrink-0 text-[#D24A15]" />
+            <p className="leading-6">
+              <span className="font-medium">Đặt nhiều phòng?</span>{' '}
+              Chỉ cần gọi <a className="text-[#D24A15] font-medium underline" href="#">1900 3311</a> hoặc{' '}
+              <a className="text-[#D24A15] font-medium underline" href="#">email</a>. Đã có Haidang Home lo.
+            </p>
           </div>
 
           {/* Property Filters (City, Price, Sort) */}

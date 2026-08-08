@@ -119,7 +119,7 @@ export default function AdminPage() {
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 border-b border-gray-200 bg-white flex justify-between items-center px-16 z-40">
+      <header className="hidden lg:flex fixed top-0 right-0 w-[calc(100%-16rem)] h-16 border-b border-gray-200 bg-white justify-between items-center px-6 lg:px-12 xl:px-16 z-40">
         <div className="flex items-center gap-8">
           <h2 className="font-serif text-2xl font-semibold text-[#D24A15] hidden lg:block">
             Luxury Hotel Admin
@@ -156,7 +156,7 @@ export default function AdminPage() {
       </header>
 
       {/* Main Content */}
-      <main className="ml-64 pt-24 px-16 pb-12 min-h-screen">
+      <main className="px-4 sm:px-6 lg:px-10 xl:px-16 py-6 lg:pt-24 pb-12 min-h-screen">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-4">
           <div>

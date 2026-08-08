@@ -28,6 +28,7 @@ public record RefreshTokenCommand(
     string RefreshToken) : IRequest<Result<AuthResponse>>;
 
 public record LogoutCommand(
+    Guid UserId,
     string RefreshToken) : IRequest<Result>;
 
 // Property Commands
@@ -49,6 +50,8 @@ public record CreatePropertyCommand(
 
 public record UpdatePropertyCommand(
     Guid Id,
+    Guid ActorUserId,
+    bool IsAdmin,
     string Name,
     string? Description,
     Guid CategoryId,
@@ -64,10 +67,14 @@ public record UpdatePropertyCommand(
     string? BrandName) : IRequest<Result<PropertyDto>>;
 
 public record DeletePropertyCommand(
-    Guid Id) : IRequest<Result>;
+    Guid Id,
+    Guid ActorUserId,
+    bool IsAdmin) : IRequest<Result>;
 
 // Room Commands
 public record CreateRoomCommand(
+    Guid ActorUserId,
+    bool IsAdmin,
     string Name,
     string? Description,
     Guid PropertyId,
@@ -78,11 +85,14 @@ public record CreateRoomCommand(
     int BedCount,
     int BathroomCount,
     int SizeInSqm,
+    int TotalUnits,
     List<string>? ImageUrls = null,
     List<Guid>? AmenityIds = null) : IRequest<Result<RoomDto>>;
 
 public record UpdateRoomCommand(
     Guid Id,
+    Guid ActorUserId,
+    bool IsAdmin,
     string Name,
     string? Description,
     int RoomNumber,
@@ -92,11 +102,14 @@ public record UpdateRoomCommand(
     int BedCount,
     int BathroomCount,
     int SizeInSqm,
+    int? TotalUnits,
     bool IsActive,
     bool IsAvailable) : IRequest<Result<RoomDto>>;
 
 public record DeleteRoomCommand(
-    Guid Id) : IRequest<Result>;
+    Guid Id,
+    Guid ActorUserId,
+    bool IsAdmin) : IRequest<Result>;
 
 // Booking Commands
 public record CreateBookingCommand(
@@ -115,10 +128,13 @@ public record CreateBookingCommand(
 public record UpdateBookingStatusCommand(
     Guid BookingId,
     BookingStatus NewStatus,
-    string? CancellationReason) : IRequest<Result<BookingDto>>;
+    string? CancellationReason,
+    Guid ActorUserId,
+    bool IsAdmin) : IRequest<Result<BookingDto>>;
 
 public record CancelBookingCommand(
     Guid BookingId,
+    Guid ActorUserId,
     string Reason) : IRequest<Result>;
 
 // Category Commands
@@ -148,7 +164,8 @@ public record CreateAdminCategoryCommand(
     string? DescriptionVi,
     string? DescriptionEn,
     string? IconUrl,
-    int DisplayOrder) : IRequest<Result<CategoryAdminDto>>;
+    int DisplayOrder,
+    bool AllowsRooms) : IRequest<Result<CategoryAdminDto>>;
 
 public record UpdateAdminCategoryCommand(
     Guid Id,
@@ -158,7 +175,8 @@ public record UpdateAdminCategoryCommand(
     string? DescriptionEn,
     string? IconUrl,
     int DisplayOrder,
-    bool IsActive) : IRequest<Result<CategoryAdminDto>>;
+    bool IsActive,
+    bool AllowsRooms) : IRequest<Result<CategoryAdminDto>>;
 
 public record DeleteAdminCategoryCommand(Guid Id) : IRequest<Result>;
 

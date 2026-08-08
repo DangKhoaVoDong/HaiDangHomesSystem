@@ -33,6 +33,7 @@ public class GetAllCategoriesAdminQueryHandler : IRequestHandler<GetAllCategorie
                 c.IconUrl,
                 c.DisplayOrder,
                 c.IsActive,
+                c.AllowsRooms,
                 c.CreatedAt,
                 c.UpdatedAt))
             .ToList();
@@ -73,6 +74,7 @@ public class CreateAdminCategoryCommandHandler : IRequestHandler<CreateAdminCate
             Description = request.DescriptionVi,
             IconUrl = request.IconUrl,
             DisplayOrder = request.DisplayOrder,
+            AllowsRooms = request.AllowsRooms,
             IsActive = true,
             IsDeleted = false,
             CreatedAt = now,
@@ -108,7 +110,7 @@ public class CreateAdminCategoryCommandHandler : IRequestHandler<CreateAdminCate
         return Result<CategoryAdminDto>.Success(new CategoryAdminDto(
             categoryId, request.NameVi, request.NameEn,
             request.DescriptionVi, request.DescriptionEn,
-            request.IconUrl, request.DisplayOrder, true, now, null));
+            request.IconUrl, request.DisplayOrder, true, request.AllowsRooms, now, null));
     }
 }
 
@@ -141,6 +143,7 @@ public class UpdateAdminCategoryCommandHandler : IRequestHandler<UpdateAdminCate
         category.IconUrl = request.IconUrl;
         category.DisplayOrder = request.DisplayOrder;
         category.IsActive = request.IsActive;
+        category.AllowsRooms = request.AllowsRooms;
         await _categoryRepository.UpdateAsync(category, cancellationToken);
 
         var now = DateTime.UtcNow;
@@ -172,6 +175,7 @@ public class UpdateAdminCategoryCommandHandler : IRequestHandler<UpdateAdminCate
             category.Id, request.NameVi, request.NameEn,
             request.DescriptionVi, request.DescriptionEn,
             category.IconUrl, category.DisplayOrder, category.IsActive,
+            category.AllowsRooms,
             category.CreatedAt, category.UpdatedAt));
     }
 }

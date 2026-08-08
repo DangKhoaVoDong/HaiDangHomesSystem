@@ -37,6 +37,8 @@ public class GetAllBookingsQueryHandler : IRequestHandler<GetAllBookingsQuery, S
     {
         var all = await _bookingRepository.GetAllAsync(cancellationToken);
         var query = all.AsEnumerable();
+        if (!request.IsAdmin)
+            query = query.Where(b => b.Room?.Property?.HostId == request.ActorUserId);
 
         if (request.Status.HasValue)
         {
@@ -67,14 +69,22 @@ public class GetAllBookingsQueryHandler : IRequestHandler<GetAllBookingsQuery, S
 public class GetPropertyBookingsQueryHandler : IRequestHandler<GetPropertyBookingsQuery, List<BookingDto>>
 {
     private readonly IBookingRepository _bookingRepository;
+    private readonly IPropertyRepository _propertyRepository;
 
-    public GetPropertyBookingsQueryHandler(IBookingRepository bookingRepository)
+    public GetPropertyBookingsQueryHandler(
+        IBookingRepository bookingRepository,
+        IPropertyRepository propertyRepository)
     {
         _bookingRepository = bookingRepository;
+        _propertyRepository = propertyRepository;
     }
 
     public async Task<List<BookingDto>> Handle(GetPropertyBookingsQuery request, CancellationToken cancellationToken)
     {
+        var property = await _propertyRepository.GetByIdAsync(request.PropertyId, cancellationToken);
+        if (property == null || (!request.IsAdmin && property.HostId != request.ActorUserId))
+            return [];
+
         var bookings = await _bookingRepository.GetBookingsByPropertyAsync(request.PropertyId, cancellationToken);
 
         if (request.FromDate.HasValue)
@@ -106,6 +116,10 @@ public class GetBookingCalendarQueryHandler : IRequestHandler<GetBookingCalendar
             request.EndDate,
             request.PropertyId,
             cancellationToken);
+        if (!request.IsAdmin)
+            bookings = bookings
+                .Where(b => b.Room?.Property?.HostId == request.ActorUserId)
+                .ToList();
 
         return bookings.Select(b => new BookingCalendarDto(
             b.Id,
@@ -132,7 +146,9 @@ public class GetPropertiesByHostQueryHandler : IRequestHandler<GetPropertiesByHo
 
     public async Task<List<PropertyListDto>> Handle(GetPropertiesByHostQuery request, CancellationToken cancellationToken)
     {
-        var properties = await _propertyRepository.GetByHostIdAsync(request.HostId, cancellationToken);
+        var properties = request.IsAdmin
+            ? await _propertyRepository.GetAllForManagementAsync(cancellationToken)
+            : await _propertyRepository.GetByHostIdAsync(request.HostId, cancellationToken);
         return properties.Select(p => p.ToListDto()).ToList();
     }
 }
@@ -149,6 +165,8 @@ public class GetRoomsForManagementQueryHandler : IRequestHandler<GetRoomsForMana
     public async Task<SearchResult<RoomManagementDto>> Handle(GetRoomsForManagementQuery request, CancellationToken cancellationToken)
     {
         var rooms = await _roomRepository.GetRoomsForManagementAsync(
+            request.ActorUserId,
+            request.IsAdmin,
             request.PropertyId,
             request.Status,
             request.Page,
@@ -156,6 +174,8 @@ public class GetRoomsForManagementQueryHandler : IRequestHandler<GetRoomsForMana
             cancellationToken);
 
         var totalCount = await _roomRepository.GetTotalCountForManagementAsync(
+            request.ActorUserId,
+            request.IsAdmin,
             request.PropertyId,
             request.Status,
             cancellationToken);

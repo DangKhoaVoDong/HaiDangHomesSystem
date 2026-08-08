@@ -27,7 +27,7 @@ function readAuthCookie(req: NextRequest): AuthCookieData | null {
   }
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const auth = readAuthCookie(req);
 

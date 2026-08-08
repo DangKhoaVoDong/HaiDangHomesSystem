@@ -6,6 +6,7 @@ using HaiDangHomes.Application.CQRS.Commands;
 using HaiDangHomes.Application.CQRS.Queries;
 using HaiDangHomes.Application.DTOs;
 using HaiDangHomes.Domain.Enums;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HaiDangHomes.API.Controllers;
 
@@ -21,9 +22,14 @@ public class BookingsController : ControllerBase
     }
 
     [HttpGet("{bookingCode}")]
+    [Authorize]
     public async Task<ActionResult<ApiResponse<BookingDto>>> GetByCode(string bookingCode)
     {
-        var result = await _mediator.Send(new GetBookingByCodeQuery(bookingCode));
+        var result = await _mediator.Send(new GetBookingByCodeQuery(
+            bookingCode,
+            GetCurrentUserId(),
+            User.IsInRole("Manager") || User.IsInRole("Admin"),
+            User.IsInRole("Admin")));
 
         if (result == null)
             return NotFound(ApiResponse<BookingDto>.ErrorResponse("Booking not found"));
@@ -51,22 +57,17 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting("booking")]
     public async Task<ActionResult<ApiResponse<BookingDto>>> Create([FromBody] CreateBookingRequest request)
     {
-        // Validate guest info for non-logged-in users
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            if (string.IsNullOrWhiteSpace(request.GuestFullName))
-                return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Full name is required for guest booking"));
-            if (string.IsNullOrWhiteSpace(request.GuestEmail))
-                return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Email is required for guest booking"));
-            if (string.IsNullOrWhiteSpace(request.GuestPhone))
-                return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Phone number is required for guest booking"));
-
-            // Validate email format
-            if (!IsValidEmail(request.GuestEmail))
-                return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Invalid email format"));
-        }
+        if (string.IsNullOrWhiteSpace(request.GuestFullName))
+            return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Full name is required"));
+        if (string.IsNullOrWhiteSpace(request.GuestEmail))
+            return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Email is required"));
+        if (string.IsNullOrWhiteSpace(request.GuestPhone))
+            return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Phone number is required"));
+        if (!IsValidEmail(request.GuestEmail))
+            return BadRequest(ApiResponse<BookingDto>.ErrorResponse("Invalid email format"));
 
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         Guid? parsedUserId = null;
@@ -93,7 +94,10 @@ public class BookingsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<BookingDto>.ErrorResponse(result.Error ?? "Booking failed"));
 
-        return Ok(ApiResponse<BookingDto>.SuccessResponse(result.Value!, "Booking created successfully"));
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<BookingDto>.SuccessResponse(
+                result.Value!,
+                "Your request was received. We are checking room availability and will contact you as soon as possible."));
     }
 
     private static bool IsValidEmail(string email)
@@ -118,7 +122,9 @@ public class BookingsController : ControllerBase
         var command = new UpdateBookingStatusCommand(
             bookingId,
             request.NewStatus,
-            null);
+            request.AdminNote,
+            GetCurrentUserId(),
+            User.IsInRole("Admin"));
 
         var result = await _mediator.Send(command);
 
@@ -134,13 +140,13 @@ public class BookingsController : ControllerBase
         Guid bookingId,
         [FromBody] CancelBookingRequest request)
     {
-        var command = new CancelBookingCommand(bookingId, request.Reason);
+        var command = new CancelBookingCommand(bookingId, GetCurrentUserId(), request.Reason);
         var result = await _mediator.Send(command);
 
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<BookingDto>.ErrorResponse(result.Error ?? "Cancellation failed"));
 
-        return Ok(ApiResponse<BookingDto>.SuccessResponse(null, "Booking cancelled"));
+        return Ok(ApiResponse.SuccessResponse("Booking cancelled"));
     }
 
     [Authorize(Roles = "Manager,Admin")]
@@ -154,6 +160,7 @@ public class BookingsController : ControllerBase
         BookingStatus? bookingStatus = status.HasValue ? (BookingStatus)status.Value : null;
 
         var result = await _mediator.Send(new GetAllBookingsQuery(
+            GetCurrentUserId(), User.IsInRole("Admin"),
             page, pageSize, bookingStatus, propertyId));
 
         return Ok(ApiResponse<SearchResult<BookingDto>>.SuccessResponse(result));
@@ -167,6 +174,7 @@ public class BookingsController : ControllerBase
         [FromQuery] Guid? propertyId = null)
     {
         var result = await _mediator.Send(new GetBookingCalendarQuery(
+            GetCurrentUserId(), User.IsInRole("Admin"),
             startDate, endDate, propertyId));
 
         return Ok(ApiResponse<List<BookingCalendarDto>>.SuccessResponse(result));
@@ -180,9 +188,16 @@ public class BookingsController : ControllerBase
         [FromQuery] DateTime? toDate = null)
     {
         var result = await _mediator.Send(new GetPropertyBookingsQuery(
+            GetCurrentUserId(), User.IsInRole("Admin"),
             propertyId, fromDate, toDate));
 
         return Ok(ApiResponse<List<BookingDto>>.SuccessResponse(result));
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var value = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(value, out var id) ? id : Guid.Empty;
     }
 }
 
