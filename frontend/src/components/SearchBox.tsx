@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguageStore } from '@/stores/language';
-import { Calendar, Users, MapPin, Search, Plus, Minus, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
+import { MapPin, Plus, Minus, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
 import {
   addMonths,
   format,
@@ -160,7 +160,6 @@ export function SearchBox() {
       setDateRange({ start: day, end: dateRange.start });
     } else {
       setDateRange({ start: dateRange.start, end: day });
-      setTimeout(() => setOpenPanel('guests'), 250);
     }
   };
 
@@ -321,25 +320,22 @@ export function SearchBox() {
     <form
       ref={containerRef}
       onSubmit={handleSearch}
-      className="bg-white rounded-3xl md:rounded-full shadow-xl border border-gray-200 w-full max-w-4xl mx-auto relative"
+      className="relative mx-auto w-full max-w-[1000px] rounded-2xl border border-white/70 bg-white shadow-[0_8px_28px_rgba(0,0,0,.14)] md:rounded-full"
     >
-      <div className="flex flex-col md:flex-row items-stretch md:divide-x divide-gray-200">
+      <div className="grid grid-cols-1 items-stretch divide-y divide-gray-200 md:grid-cols-[1.45fr_1.65fr_1fr_auto] md:divide-x md:divide-y-0">
         {/* Where */}
         <button
           type="button"
           onClick={() => setOpenPanel(openPanel === 'location' ? null : 'location')}
-          className={`flex-[3] flex items-center gap-3 text-left px-4 sm:px-6 py-3 md:py-4 rounded-t-3xl md:rounded-l-full md:rounded-tr-none transition-colors ${
+          className={`flex min-w-0 items-center text-left px-5 py-3.5 transition-colors md:rounded-l-full md:px-7 ${
             openPanel === 'location' ? 'bg-gray-100' : 'hover:bg-gray-50'
           }`}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100">
-            <MapPin className="h-4 w-4 text-gray-700" />
-          </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-900">
+            <span className="block text-xs font-medium text-[#e64812]">
               {t.where}
             </span>
-            <span className={`block text-sm font-medium truncate ${location ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`mt-1 block truncate text-sm font-medium ${location ? 'text-gray-900' : 'text-gray-400'}`}>
               {location || t.whereHint}
             </span>
           </span>
@@ -347,103 +343,66 @@ export function SearchBox() {
 
         {/* When - 2 inline date inputs */}
         <div
-          className={`flex-[4] flex items-stretch transition-colors ${
+          className={`grid min-w-0 grid-cols-2 transition-colors ${
             openPanel === 'dates' ? 'bg-gray-100' : 'hover:bg-gray-50'
           }`}
         >
           {/* Check-in sub-cell */}
-          <div className="flex-1 flex items-center gap-2 px-4 py-3 md:py-4 border-r border-gray-200/70 cursor-text"
-            onClick={(e) => {
-              if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                setOpenPanel('dates');
-              }
-            }}
+          <button type="button" className="flex min-w-0 cursor-pointer items-center border-r border-gray-200/70 px-5 py-3.5 text-left"
+            onClick={() => setOpenPanel('dates')}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100">
-              <Calendar className="h-4 w-4 text-gray-700" />
-            </span>
             <div className="min-w-0 flex-1">
-              <label
-                htmlFor="checkin-input"
-                className="block text-[11px] font-bold uppercase tracking-wider text-gray-900 cursor-pointer"
-              >
+              <span className="block text-xs font-medium text-[#e64812]">
                 {t.checkIn}
-              </label>
-              <input
-                id="checkin-input"
-                type="text"
-                inputMode="numeric"
-                value={formatDateForInput(dateRange.start)}
-                onChange={(e) => handleDateInputChange(e.target.value, 'start')}
-                onFocus={() => setOpenPanel('dates')}
-                placeholder={t.datePlaceholder}
-                className={`w-full bg-transparent text-sm font-medium focus:outline-none border-0 p-0 placeholder:text-gray-400 ${
+              </span>
+              <span className={`mt-1 block truncate text-sm font-medium ${
                   dateRange.start ? 'text-gray-900' : 'text-gray-500'
                 }`}
-              />
+              >{formatDateForInput(dateRange.start) || t.datePlaceholder}</span>
             </div>
-          </div>
+          </button>
 
           {/* Check-out sub-cell */}
-          <div className="flex-1 flex items-center gap-2 px-4 py-3 md:py-4 cursor-text"
-            onClick={(e) => {
-              if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                setOpenPanel('dates');
-              }
-            }}
+          <button type="button" className="flex min-w-0 cursor-pointer items-center px-5 py-3.5 text-left"
+            onClick={() => setOpenPanel('dates')}
           >
             <div className="min-w-0 flex-1">
-              <label
-                htmlFor="checkout-input"
-                className="block text-[11px] font-bold uppercase tracking-wider text-gray-900 cursor-pointer"
-              >
+              <span className="block text-xs font-medium text-[#e64812]">
                 {t.checkOut}
-              </label>
-              <input
-                id="checkout-input"
-                type="text"
-                inputMode="numeric"
-                value={formatDateForInput(dateRange.end)}
-                onChange={(e) => handleDateInputChange(e.target.value, 'end')}
-                onFocus={() => setOpenPanel('dates')}
-                placeholder={t.datePlaceholder}
-                className={`w-full bg-transparent text-sm font-medium focus:outline-none border-0 p-0 placeholder:text-gray-400 ${
+              </span>
+              <span className={`mt-1 block truncate text-sm font-medium ${
                   dateRange.end ? 'text-gray-900' : 'text-gray-500'
                 }`}
-              />
+              >{formatDateForInput(dateRange.end) || t.datePlaceholder}</span>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Who */}
         <button
           type="button"
           onClick={() => setOpenPanel(openPanel === 'guests' ? null : 'guests')}
-          className={`flex-[3] flex items-center gap-3 text-left px-4 sm:px-6 py-3 md:py-4 transition-colors ${
+          className={`flex min-w-0 items-center px-5 py-3.5 text-left transition-colors ${
             openPanel === 'guests' ? 'bg-gray-100' : 'hover:bg-gray-50'
           }`}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100">
-            <Users className="h-4 w-4 text-gray-700" />
-          </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-900">
+            <span className="block text-xs font-medium text-[#e64812]">
               {t.who}
             </span>
-            <span className={`block text-sm font-medium truncate ${totalGuests > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`mt-1 block truncate text-sm font-medium ${totalGuests > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
               {guestLabel}
             </span>
           </span>
         </button>
 
         {/* Search button */}
-        <div className="flex items-center px-4 py-3 md:py-2">
+        <div className="flex items-center px-4 py-3 md:px-5 md:py-2">
           <button
             type="submit"
-            className="w-full md:w-auto justify-center flex items-center gap-2 bg-[#D24A15] hover:bg-[#b03d10] text-white font-medium rounded-full px-5 py-3 transition-colors shadow-md"
+            className="flex w-full min-w-[140px] items-center justify-center rounded-full bg-[#e64812] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#c93c0d] md:w-auto"
           >
-            <Search className="w-4 h-4" />
-            <span className="hidden sm:inline text-sm">{t.search}</span>
+            <span>{language === 'vi' ? 'Tìm phòng' : t.search}</span>
           </button>
         </div>
       </div>
@@ -497,9 +456,11 @@ export function SearchBox() {
 
       {/* ─── Dates popover (dual-month) ─── */}
       {openPanel === 'dates' && (
-        <div className="absolute top-full left-0 right-0 md:left-0 md:right-auto md:w-[720px] mt-3 bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 z-40">
+        <>
+        <button type="button" aria-label="Close calendar" onClick={() => setOpenPanel(null)} className="fixed inset-0 z-30 cursor-default bg-black/30 backdrop-blur-[1px]" />
+        <div className="absolute left-1/2 top-[calc(100%+18px)] z-40 w-[min(740px,calc(100vw-28px))] -translate-x-1/2 rounded-[18px] border border-gray-100 bg-white p-5 shadow-[0_20px_70px_rgba(0,0,0,.22)] sm:p-6">
           {/* Top bar: legend + night count */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="hidden">
             <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">
               {dateRange.start && dateRange.end
                 ? `${t.nightsLabel(nightCount)} • ${format(dateRange.start, 'd MMM', { locale: dateLocale })} – ${format(dateRange.end, 'd MMM', { locale: dateLocale })}`
@@ -519,7 +480,7 @@ export function SearchBox() {
           </div>
 
           {/* Month navigation */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-2 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setViewMonth(addMonths(viewMonth, -1))}
@@ -528,7 +489,7 @@ export function SearchBox() {
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="text-sm font-medium">
+            <div className="sr-only">
               {format(viewMonth, 'yyyy', { locale: dateLocale })}
             </div>
             <button
@@ -542,13 +503,13 @@ export function SearchBox() {
           </div>
 
           {/* Dual month grids */}
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col gap-8 md:flex-row">
             {renderMonth(viewMonth)}
             {renderMonth(addMonths(viewMonth, 1))}
           </div>
 
           {/* Quick flexible presets */}
-          <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-2">
+          <div className="hidden">
             <span className="text-xs text-gray-500 mr-1 flex items-center gap-1">
               <Compass className="w-3 h-3" />
               {t.flexible}:
@@ -582,7 +543,18 @@ export function SearchBox() {
               {t.clear}
             </button>
           </div>
+          <div className="mt-5 flex flex-col gap-1 border-t pt-4 text-right">
+            <strong className="text-sm text-gray-800">
+              {dateRange.start && dateRange.end
+                ? `${format(dateRange.start, 'EEE, dd/MM', { locale: dateLocale })} – ${format(dateRange.end, 'EEE, dd/MM', { locale: dateLocale })} (${t.nightsLabel(nightCount)})`
+                : !dateRange.start ? t.pickStart : t.pickEnd}
+            </strong>
+            <span className="text-xs text-gray-400">
+              {language === 'vi' ? 'Tất cả ngày giờ theo giờ địa phương' : 'All dates use local time'}
+            </span>
+          </div>
         </div>
+        </>
       )}
 
       {/* ─── Guests popover ─── */}

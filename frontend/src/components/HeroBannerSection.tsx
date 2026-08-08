@@ -46,9 +46,9 @@ export const HeroBannerSection = () => {
       </div>
 
       {/* Quick-Search Widget */}
-      <div className="relative z-20 w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-16 flex flex-col items-center">
+      <div className="absolute left-0 right-0 top-[42%] z-20 mx-auto flex w-full max-w-[1440px] -translate-y-full flex-col items-center px-4 sm:px-8 lg:px-12 xl:px-16">
         {/* Tabs */}
-        <div className="w-full sm:w-auto flex overflow-x-auto bg-white/20 backdrop-blur-md rounded-2xl sm:rounded-full p-1 mb-4 sm:mb-6 border border-white/30">
+        <div className="hidden">
           {categories.map((category) => {
             const isSelected = selectedCategory === category;
             return (
