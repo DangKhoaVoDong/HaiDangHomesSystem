@@ -7,18 +7,15 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true
-    env:
+    envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
 
-      - key: DATABASE_URL
-        value: ${DATABASE_URL}
-
       - key: ConnectionStrings__DefaultConnection
-        value: ${DATABASE_URL}
+        sync: false
 
       - key: ConnectionStrings__Redis
-        value: ${UPSTASH_REDIS_URL}
+        sync: false
 
       - key: Jwt__Secret
         sync: false
@@ -46,4 +43,7 @@ services:
       - key: App__CompanyName
         value: HaiDang Homes
       - key: App__Url
+        sync: false
+
+      - key: AllowedOrigins
         sync: false

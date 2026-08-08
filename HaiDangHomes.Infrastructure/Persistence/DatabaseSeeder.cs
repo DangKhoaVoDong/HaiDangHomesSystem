@@ -25,7 +25,24 @@ public static class DatabaseSeeder
             logger.LogWarning(ex, "DatabaseSeeder: Migrate step skipped or failed (will rely on existing schema).");
         }
 
-        var shouldForceReseed = Environment.GetEnvironmentVariable("FORCE_RESET_DB")?.ToLower() == "true";
+        var resetRequested = forceReseed ||
+            string.Equals(
+                Environment.GetEnvironmentVariable("FORCE_RESET_DB"),
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+        var isProduction = string.Equals(
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+            "Production",
+            StringComparison.OrdinalIgnoreCase);
+
+        // Never wipe production data during application startup. A stale
+        // FORCE_RESET_DB value on the hosting platform must not delete rooms,
+        // bookings, or customer requests.
+        var shouldForceReseed = resetRequested && !isProduction;
+        if (resetRequested && isProduction)
+        {
+            logger.LogWarning("DatabaseSeeder: Force reseed was ignored in Production.");
+        }
 
         var hasData = await dbContext.Users.IgnoreQueryFilters().AnyAsync();
 
