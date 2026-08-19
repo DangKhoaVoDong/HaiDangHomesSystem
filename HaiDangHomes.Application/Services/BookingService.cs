@@ -187,8 +187,9 @@ public class BookingService : IBookingService
             }
         }
 
-        // Email notifications are intentionally disabled for the request-review flow.
-        if (false && !string.IsNullOrEmpty(guestEmailToSend))
+        // Notify the guest immediately after the request has been safely stored.
+        // Email delivery failures must not roll back or duplicate the booking.
+        if (!string.IsNullOrWhiteSpace(guestEmailToSend))
         {
             try
             {
@@ -206,8 +207,10 @@ public class BookingService : IBookingService
             }
             catch (Exception ex)
             {
-                // Log error but don't fail the booking
-                Console.WriteLine($"Failed to send pending booking email: {ex.Message}");
+                // Keep the booking, but preserve the complete Resend error in Render logs.
+                Console.Error.WriteLine(
+                    $"Failed to send pending booking email for booking {bookingCode} " +
+                    $"to {guestEmailToSend}: {ex}");
             }
         }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { propertiesApi, categoriesApi, roomsApi, amenitiesApi, getApiData } from '@/lib/api';
@@ -10,6 +11,8 @@ import { PropertyFilters, PropertyFilterState } from '@/components/PropertyFilte
 import { MapPin, Star, Wifi, Coffee, Car, Check, Phone, ChevronDown, Building2, Home } from 'lucide-react';
 import Link from 'next/link';
 import { PropertyList } from '@/types';
+
+const PropertyResultsMap = dynamic(() => import('@/components/maps/PropertyResultsMap'), { ssr: false });
 
 // ─── Date helper: format yyyy-MM-dd → Vietnamese short date ─────────────
 function formatViDate(iso: string): string {
@@ -50,6 +53,16 @@ function PropertiesContent() {
   const searchParams = useSearchParams();
   const { language } = useLanguageStore();
   const [openSearchPanel, setOpenSearchPanel] = useState<'city' | 'checkIn' | 'checkOut' | 'guests' | null>(null);
+  const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => {
+    if (!showMap) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showMap]);
 
   const categoryId = searchParams.get('category');
   const checkIn = searchParams.get('checkIn');
@@ -394,6 +407,15 @@ function PropertiesContent() {
             })}
           </div>
 
+          <button
+            type="button"
+            onClick={() => setShowMap(true)}
+            className="mb-6 flex w-full items-center justify-center gap-2 rounded-full border border-[#D24A15] bg-white px-5 py-3 text-sm font-semibold text-[#D24A15] shadow-sm lg:hidden"
+          >
+            <MapPin className="h-4 w-4" />
+            Xem bản đồ
+          </button>
+
           {/* Banner */}
           <div className="relative h-64 rounded-2xl overflow-hidden mb-6">
             <img
@@ -588,7 +610,12 @@ function PropertiesContent() {
         {/* Right Sidebar (Filters) */}
         <aside className="w-80 hidden lg:block flex-shrink-0">
           {/* Map Widget */}
-          <div className="relative h-32 rounded-xl overflow-hidden mb-6 group cursor-pointer">
+          <button
+            type="button"
+            onClick={() => setShowMap(true)}
+            className="relative h-32 w-full rounded-xl overflow-hidden mb-6 group cursor-pointer text-left"
+            aria-label="Xem bản đồ các chỗ nghỉ"
+          >
             <img
               alt="Map Thumbnail"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -599,7 +626,7 @@ function PropertiesContent() {
                 Xem bản đồ
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Filters Wrapper */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-6">
@@ -692,6 +719,13 @@ function PropertiesContent() {
           </div>
         </aside>  
       </main>
+
+      {showMap && (
+        <PropertyResultsMap
+          properties={finalProperties.length ? finalProperties : propertyList}
+          onClose={() => setShowMap(false)}
+        />
+      )}
 
       {/* Floating Chat Button */}
       <button className="fixed bottom-6 right-6 w-14 h-14 bg-[#D24A15] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#b03d10] transition-colors z-50">

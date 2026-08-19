@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -28,6 +29,11 @@ import { propertiesApi, categoriesApi, brandsApi, getApiData, getApiError, isApi
 import ImageUploadField from '@/components/ImageUploadField';
 import { useAuthStore } from '@/stores/auth';
 import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
+
+const LocationPickerMap = dynamic(() => import('@/components/maps/LocationPickerMap'), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse rounded-xl bg-gray-100" />,
+});
 
 const navItems = [
   { icon: Building2, label: 'Quản lý căn nhà', active: true, href: '/manager/properties' },
@@ -692,6 +698,16 @@ function PropertyFormModal({
               />
             </Field>
           </div>
+
+          <Field label="Chọn vị trí trên bản đồ">
+            <LocationPickerMap
+              latitude={form.latitude && Number.isFinite(Number(form.latitude)) ? Number(form.latitude) : undefined}
+              longitude={form.longitude && Number.isFinite(Number(form.longitude)) ? Number(form.longitude) : undefined}
+              onChange={(latitude, longitude) =>
+                update({ latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) })
+              }
+            />
+          </Field>
 
           <Field label="Ảnh đại diện">
             <ImageUploadField

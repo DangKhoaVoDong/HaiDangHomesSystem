@@ -2,11 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Bed, ChevronLeft, ChevronRight, ImageIcon, MapPin, Maximize, Phone, Users, X } from 'lucide-react';
 import { getApiData, propertiesApi, roomsApi } from '@/lib/api';
 import { DateRangePicker } from '@/components/DateRangePicker';
+
+const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse rounded-xl bg-gray-100" />,
+});
 
 const orange = '#df4914';
 const today = new Date().toISOString().slice(0, 10);
@@ -50,6 +56,10 @@ export default function PropertyDetailPage() {
     return [...new Set(images)] as string[];
   }, [property]);
   const roomImages = roomModal ? [roomModal.primaryImageUrl, ...(roomModal.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean) : [];
+  const latitude = Number(property?.latitude);
+  const longitude = Number(property?.longitude);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+  const fullAddress = [property?.address, property?.city].filter(Boolean).join(', ');
 
   const goBooking = (room: any) => {
     const query = new URLSearchParams({ propertyId: id, checkIn, checkOut, guests: String(guests) });
@@ -92,8 +102,29 @@ export default function PropertyDetailPage() {
           </div>
         </div>
         <div>
-          <iframe title="Vị trí" className="h-64 w-full rounded-lg border-0" loading="lazy" src={`https://www.google.com/maps?q=${encodeURIComponent(`${property.address}, ${property.city ?? ''}`)}&output=embed`} />
-          <a className="mt-3 flex items-start gap-2 text-gray-700 hover:underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.address}, ${property.city ?? ''}`)}`}><MapPin className="mt-0.5 h-5 w-5 shrink-0" />{property.address}, {property.city}</a>
+          {hasCoordinates ? (
+            <PropertyMap latitude={latitude} longitude={longitude} name={property.name} address={fullAddress} />
+          ) : (
+            <div className="grid h-72 place-items-center rounded-xl bg-gray-100 px-6 text-center text-sm text-gray-500">
+              Căn nhà chưa được cập nhật tọa độ trên bản đồ.
+            </div>
+          )}
+          {hasCoordinates ? (
+            <a
+              className="mt-3 flex items-start gap-2 text-gray-700 hover:text-orange-600 hover:underline"
+              target="_blank"
+              rel="noreferrer"
+              href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`}
+            >
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0" />
+              {fullAddress}
+            </a>
+          ) : (
+            <p className="mt-3 flex items-start gap-2 text-gray-600">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0" />
+              {fullAddress}
+            </p>
+          )}
         </div>
       </section>
 

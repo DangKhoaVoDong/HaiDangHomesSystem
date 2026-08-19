@@ -193,9 +193,12 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Apply migrations + seed initial data
-using (var scope = app.Services.CreateScope())
+// Apply migrations + seed initial data unless explicitly disabled (for example,
+// when a local API instance connects to an existing shared database).
+var initializeDatabase = builder.Configuration.GetValue("Database:InitializeOnStartup", true);
+if (initializeDatabase)
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     try
