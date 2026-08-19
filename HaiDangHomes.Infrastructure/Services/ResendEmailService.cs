@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Resend;
 using HaiDangHomes.Domain.Interfaces;
-using System.Net.Mail;
 
 namespace HaiDangHomes.Infrastructure.Services;
 
@@ -40,9 +39,19 @@ public class ResendEmailService : IEmailService
             return string.Empty;
         }
 
-        // Resend accepts a plain address reliably across SDK versions. Parsing also
-        // strips accidental whitespace/quotes copied from environment dashboards.
-        return new MailAddress(value.Trim()).Address;
+        // Keep service construction non-throwing: environment dashboards can add
+        // quotes or invisible whitespace. Resend accepts the plain address most
+        // reliably across SDK versions.
+        var normalized = value.Trim().Trim('"', '\'').Trim();
+        var openBracket = normalized.LastIndexOf('<');
+        var closeBracket = normalized.IndexOf('>', openBracket + 1);
+
+        if (openBracket >= 0 && closeBracket > openBracket)
+        {
+            normalized = normalized[(openBracket + 1)..closeBracket];
+        }
+
+        return normalized.Trim().Trim('"', '\'').Trim();
     }
 
     public async Task SendBookingConfirmationAsync(
