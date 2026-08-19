@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Resend;
 using HaiDangHomes.Domain.Interfaces;
+using System.Net.Mail;
 
 namespace HaiDangHomes.Infrastructure.Services;
 
@@ -14,15 +15,15 @@ public class ResendEmailService : IEmailService
 
     public ResendEmailService(string apiKey, string fromEmail, string companyName, ILogger<ResendEmailService> logger)
     {
-        _apiKey = apiKey;
-        _fromEmail = fromEmail;
-        _companyName = companyName;
-        _logger = logger;
         // Dev fallback: skip Resend API call and log content locally when key is missing/invalid.
         _devMode = string.IsNullOrWhiteSpace(apiKey)
                    || apiKey.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase)
                    || apiKey.StartsWith("re_PLACEHOLDER", StringComparison.OrdinalIgnoreCase)
                    || apiKey.Contains("YOUR_RESEND_KEY", StringComparison.OrdinalIgnoreCase);
+        _apiKey = apiKey.Trim();
+        _fromEmail = _devMode ? fromEmail.Trim() : NormalizeEmailAddress(fromEmail);
+        _companyName = companyName;
+        _logger = logger;
 
         _logger.LogInformation(
             "Resend email service configured. Enabled={Enabled}, From={From}",
@@ -31,6 +32,18 @@ public class ResendEmailService : IEmailService
     }
 
     private IResend GetClient() => ResendClient.Create(_apiKey);
+
+    private static string NormalizeEmailAddress(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        // Resend accepts a plain address reliably across SDK versions. Parsing also
+        // strips accidental whitespace/quotes copied from environment dashboards.
+        return new MailAddress(value.Trim()).Address;
+    }
 
     public async Task SendBookingConfirmationAsync(
         string toEmail,
