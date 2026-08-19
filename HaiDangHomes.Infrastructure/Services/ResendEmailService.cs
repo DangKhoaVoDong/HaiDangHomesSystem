@@ -1,11 +1,16 @@
 using Microsoft.Extensions.Logging;
 using Resend;
 using HaiDangHomes.Domain.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace HaiDangHomes.Infrastructure.Services;
 
 public class ResendEmailService : IEmailService
 {
+    private const string DefaultSenderEmail = "booking@haidanghomes.com";
+    private static readonly Regex EmailPattern = new(
+        @"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly string _apiKey;
     private readonly string _fromEmail;
     private readonly string _companyName;
@@ -36,22 +41,14 @@ public class ResendEmailService : IEmailService
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return string.Empty;
+            return DefaultSenderEmail;
         }
 
         // Keep service construction non-throwing: environment dashboards can add
         // quotes or invisible whitespace. Resend accepts the plain address most
         // reliably across SDK versions.
-        var normalized = value.Trim().Trim('"', '\'').Trim();
-        var openBracket = normalized.LastIndexOf('<');
-        var closeBracket = normalized.IndexOf('>', openBracket + 1);
-
-        if (openBracket >= 0 && closeBracket > openBracket)
-        {
-            normalized = normalized[(openBracket + 1)..closeBracket];
-        }
-
-        return normalized.Trim().Trim('"', '\'').Trim();
+        var match = EmailPattern.Match(value);
+        return match.Success ? match.Value : DefaultSenderEmail;
     }
 
     public async Task SendBookingConfirmationAsync(
