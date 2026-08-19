@@ -23,6 +23,11 @@ public class ResendEmailService : IEmailService
                    || apiKey.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase)
                    || apiKey.StartsWith("re_PLACEHOLDER", StringComparison.OrdinalIgnoreCase)
                    || apiKey.Contains("YOUR_RESEND_KEY", StringComparison.OrdinalIgnoreCase);
+
+        _logger.LogInformation(
+            "Resend email service configured. Enabled={Enabled}, From={From}",
+            !_devMode,
+            _fromEmail);
     }
 
     private IResend GetClient() => ResendClient.Create(_apiKey);
@@ -370,6 +375,22 @@ public class ResendEmailService : IEmailService
             return;
         }
 
-        await GetClient().EmailSendAsync(email, cancellationToken);
+        var receipt = await GetClient().EmailSendAsync(email, cancellationToken);
+        if (!receipt.Success)
+        {
+            if (receipt.Exception is not null)
+            {
+                throw receipt.Exception;
+            }
+
+            throw new InvalidOperationException("Resend rejected the email without an error message.");
+        }
+
+        _logger.LogInformation(
+            "Resend accepted email {EmailId}. From={From}, To={To}, Subject={Subject}",
+            receipt.Content,
+            email.From,
+            string.Join(",", email.To),
+            email.Subject);
     }
 }
