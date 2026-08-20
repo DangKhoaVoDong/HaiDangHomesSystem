@@ -31,7 +31,7 @@ public class LocalFileStorageService : IFileStorageService
         var timestamp = DateTime.UtcNow.ToString("yyyy/MM/dd");
         var extension = Path.GetExtension(fileName);
         var uniqueId = Guid.NewGuid().ToString("N")[..8];
-        var relativePath = $"uploads/{timestamp}/{uniqueId}{extension}";
+        var relativePath = $"{timestamp}/{uniqueId}{extension}";
 
         var fullPath = Path.Combine(_basePath, timestamp);
         if (!Directory.Exists(fullPath))
@@ -42,7 +42,7 @@ public class LocalFileStorageService : IFileStorageService
         var fullFilePath = Path.Combine(_basePath, relativePath);
         await File.WriteAllBytesAsync(fullFilePath, fileData, cancellationToken);
 
-        return $"{_baseUrl}/{relativePath.Replace("\\", "/")}";
+        return $"{_baseUrl.TrimEnd('/')}/{relativePath.Replace("\\", "/")}";
     }
 
     public Task<string> GetPresignedUrlAsync(string fileKey, TimeSpan? expiration = null, CancellationToken cancellationToken = default)

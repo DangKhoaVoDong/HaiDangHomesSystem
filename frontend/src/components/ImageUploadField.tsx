@@ -67,6 +67,8 @@ export default function ImageUploadField({
         }
         toast.success(`Đã upload ${uploaded.length} ảnh`);
       }
+    } catch (error) {
+      toast.error(getApiError(error) ?? 'Không thể tải ảnh lên. Vui lòng kiểm tra cấu hình lưu trữ ảnh.');
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';

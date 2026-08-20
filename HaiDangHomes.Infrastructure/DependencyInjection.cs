@@ -69,8 +69,14 @@ public static class DependencyInjection
         }
         else
         {
-            // Fallback: local file storage (for development only)
-            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            // Fallback: local file storage (for development only). Render's filesystem
+            // is ephemeral, so production should always configure Cloudinary.
+            services.AddScoped<IFileStorageService>(sp =>
+            {
+                sp.GetRequiredService<ILogger<LocalFileStorageService>>().LogWarning(
+                    "Cloudinary is not fully configured; using temporary local image storage.");
+                return new LocalFileStorageService(configuration);
+            });
         }
 
         // Resend Email
