@@ -309,6 +309,14 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
 
         var normalizedBrand = await PropertyBrandHelper.NormalizeBrandNameAsync(
             _brandRepository, request.BrandName, cancellationToken);
+        var imageUrls = (request.ImageUrls ?? new List<string>())
+            .Select(url => url?.Trim())
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => url!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (imageUrls.Count == 0 && !string.IsNullOrWhiteSpace(request.ThumbnailUrl))
+            imageUrls.Add(request.ThumbnailUrl.Trim());
 
         var property = new Property
         {
@@ -323,7 +331,7 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
             Ward = request.Ward,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            ThumbnailUrl = request.ThumbnailUrl,
+            ThumbnailUrl = imageUrls.FirstOrDefault(),
             IsActive = request.IsActive,
             IsFeatured = request.IsFeatured,
             BrandName = normalizedBrand,
@@ -332,6 +340,7 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
         };
 
         var created = await _propertyRepository.AddAsync(property, cancellationToken);
+        await _propertyRepository.ReplaceImagesAsync(created.Id, imageUrls, cancellationToken);
 
         var withDetails = await _propertyRepository.GetByIdWithDetailsAsync(created.Id, cancellationToken);
         return Result<PropertyDto>.Success(withDetails!.ToDto());
@@ -379,13 +388,23 @@ public class UpdatePropertyCommandHandler : IRequestHandler<UpdatePropertyComman
         property.Ward = request.Ward;
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
-        property.ThumbnailUrl = request.ThumbnailUrl;
+        var imageUrls = request.ImageUrls?
+            .Select(url => url?.Trim())
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => url!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        property.ThumbnailUrl = imageUrls is not null
+            ? imageUrls.FirstOrDefault()
+            : request.ThumbnailUrl;
         property.IsActive = request.IsActive;
         property.IsFeatured = request.IsFeatured;
         property.BrandName = await PropertyBrandHelper.NormalizeBrandNameAsync(
             _brandRepository, request.BrandName, cancellationToken);
 
         await _propertyRepository.UpdateAsync(property, cancellationToken);
+        if (imageUrls is not null)
+            await _propertyRepository.ReplaceImagesAsync(property.Id, imageUrls, cancellationToken);
 
         var withDetails = await _propertyRepository.GetByIdWithDetailsAsync(property.Id, cancellationToken);
         return Result<PropertyDto>.Success(withDetails!.ToDto());

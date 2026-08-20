@@ -150,4 +150,34 @@ public class PropertyRepository : IPropertyRepository
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task ReplaceImagesAsync(
+        Guid propertyId,
+        IReadOnlyList<string> imageUrls,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.PropertyImages
+            .Where(image => image.PropertyId == propertyId)
+            .ToListAsync(cancellationToken);
+        _context.PropertyImages.RemoveRange(existing);
+
+        var images = imageUrls
+            .Select((url, index) => new { Url = url?.Trim(), Index = index })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Url))
+            .Select(item => new PropertyImage
+            {
+                Id = Guid.NewGuid(),
+                PropertyId = propertyId,
+                ImageUrl = item.Url!,
+                DisplayOrder = item.Index,
+                IsPrimary = item.Index == 0,
+                CreatedAt = DateTime.UtcNow
+            })
+            .ToList();
+
+        if (images.Count > 0)
+            await _context.PropertyImages.AddRangeAsync(images, cancellationToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

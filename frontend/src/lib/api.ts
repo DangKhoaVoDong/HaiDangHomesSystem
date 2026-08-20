@@ -150,6 +150,7 @@ export const propertiesApi = {
     latitude?: number;
     longitude?: number;
     thumbnailUrl?: string;
+    imageUrls?: string[];
     isActive: boolean;
     isFeatured: boolean;
     brandName?: string;
@@ -168,6 +169,7 @@ export const propertiesApi = {
       latitude?: number;
       longitude?: number;
       thumbnailUrl?: string;
+      imageUrls?: string[];
       isActive: boolean;
       isFeatured: boolean;
       brandName?: string;

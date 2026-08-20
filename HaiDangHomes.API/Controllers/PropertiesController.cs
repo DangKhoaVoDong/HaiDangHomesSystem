@@ -115,7 +115,8 @@ public class PropertiesController : ControllerBase
             request.ThumbnailUrl,
             request.IsActive,
             request.IsFeatured,
-            request.BrandName);
+            request.BrandName,
+            request.ImageUrls);
 
         var result = await _mediator.Send(command);
 
@@ -147,7 +148,8 @@ public class PropertiesController : ControllerBase
             request.ThumbnailUrl,
             request.IsActive,
             request.IsFeatured,
-            request.BrandName);
+            request.BrandName,
+            request.ImageUrls);
 
         var result = await _mediator.Send(command);
 

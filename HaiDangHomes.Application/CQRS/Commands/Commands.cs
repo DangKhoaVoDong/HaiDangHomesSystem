@@ -46,7 +46,8 @@ public record CreatePropertyCommand(
     string? ThumbnailUrl,
     bool IsActive,
     bool IsFeatured,
-    string? BrandName) : IRequest<Result<PropertyDto>>;
+    string? BrandName,
+    List<string>? ImageUrls) : IRequest<Result<PropertyDto>>;
 
 public record UpdatePropertyCommand(
     Guid Id,
@@ -64,7 +65,8 @@ public record UpdatePropertyCommand(
     string? ThumbnailUrl,
     bool IsActive,
     bool IsFeatured,
-    string? BrandName) : IRequest<Result<PropertyDto>>;
+    string? BrandName,
+    List<string>? ImageUrls) : IRequest<Result<PropertyDto>>;
 
 public record DeletePropertyCommand(
     Guid Id,

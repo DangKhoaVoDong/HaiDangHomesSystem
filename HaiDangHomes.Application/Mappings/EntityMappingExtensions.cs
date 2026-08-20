@@ -43,7 +43,7 @@ public static class EntityMappingExtensions
             property.BrandName,
             property.TotalRooms,
             property.Rooms?.Select(r => r.ToDto(language)).ToList() ?? new List<RoomDto>(),
-            property.Images?.Select(i => i.ToDto()).ToList() ?? new List<PropertyImageDto>(),
+            property.Images?.OrderBy(i => i.DisplayOrder).Select(i => i.ToDto()).ToList() ?? new List<PropertyImageDto>(),
             property.Amenities?.Select(a => a.Amenity.ToDto(language)).ToList() ?? new List<AmenityDto>());
     }
 

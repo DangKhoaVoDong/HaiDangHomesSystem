@@ -99,7 +99,8 @@ public record CreatePropertyRequest(
     string? ThumbnailUrl,
     bool IsActive,
     bool IsFeatured,
-    string? BrandName);
+    string? BrandName,
+    List<string>? ImageUrls);
 
 public record UpdatePropertyRequest(
     Guid Id,
@@ -115,7 +116,8 @@ public record UpdatePropertyRequest(
     string? ThumbnailUrl,
     bool IsActive,
     bool IsFeatured,
-    string? BrandName);
+    string? BrandName,
+    List<string>? ImageUrls);
 
 // Room DTOs
 public record RoomImageDto(

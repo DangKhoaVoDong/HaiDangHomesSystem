@@ -54,6 +54,7 @@ interface PropertyForm {
   latitude: string;
   longitude: string;
   thumbnailUrl: string;
+  imageUrls: string[];
   isActive: boolean;
   isFeatured: boolean;
   brandName: string;
@@ -70,6 +71,7 @@ const emptyForm: PropertyForm = {
   latitude: '',
   longitude: '',
   thumbnailUrl: '',
+  imageUrls: [],
   isActive: true,
   isFeatured: false,
   brandName: '',
@@ -132,7 +134,8 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
         ward: data.ward.trim() || undefined,
         latitude: data.latitude ? parseFloat(data.latitude) : undefined,
         longitude: data.longitude ? parseFloat(data.longitude) : undefined,
-        thumbnailUrl: data.thumbnailUrl.trim() || undefined,
+        thumbnailUrl: data.imageUrls[0] || undefined,
+        imageUrls: data.imageUrls,
         isActive: data.isActive,
         isFeatured: data.isFeatured,
         brandName: data.brandName.trim() || undefined,
@@ -171,7 +174,8 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
         ward: data.ward.trim() || undefined,
         latitude: data.latitude ? parseFloat(data.latitude) : undefined,
         longitude: data.longitude ? parseFloat(data.longitude) : undefined,
-        thumbnailUrl: data.thumbnailUrl.trim() || undefined,
+        thumbnailUrl: data.imageUrls[0] || undefined,
+        imageUrls: data.imageUrls,
         isActive: data.isActive,
         isFeatured: data.isFeatured,
         brandName: data.brandName.trim() || undefined,
@@ -239,22 +243,38 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
     },
   });
 
-  const openEdit = (p: any) => {
+  const openEdit = async (p: any) => {
+    let detail = p;
+    try {
+      const response = await propertiesApi.getById(p.id);
+      detail = getApiData(response) ?? p;
+    } catch {
+      // Keep the list data available even if refreshing details temporarily fails.
+    }
+    const imageUrls = Array.isArray(detail.images) && detail.images.length > 0
+      ? [...detail.images]
+          .sort((a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+          .map((image: any) => image.imageUrl)
+          .filter(Boolean)
+      : detail.thumbnailUrl
+        ? [detail.thumbnailUrl]
+        : [];
     setEditing({
-      id: p.id,
-      name: p.name ?? '',
-      description: p.description ?? '',
-      categoryId: p.categoryId ?? '',
-      address: p.address ?? '',
-      city: p.city ?? '',
-      district: p.district ?? '',
-      ward: p.ward ?? '',
-      latitude: p.latitude != null ? String(p.latitude) : '',
-      longitude: p.longitude != null ? String(p.longitude) : '',
-      thumbnailUrl: p.thumbnailUrl ?? '',
-      isActive: !!p.isActive,
-      isFeatured: !!p.isFeatured,
-      brandName: p.brandName ?? '',
+      id: detail.id,
+      name: detail.name ?? '',
+      description: detail.description ?? '',
+      categoryId: detail.categoryId ?? '',
+      address: detail.address ?? '',
+      city: detail.city ?? '',
+      district: detail.district ?? '',
+      ward: detail.ward ?? '',
+      latitude: detail.latitude != null ? String(detail.latitude) : '',
+      longitude: detail.longitude != null ? String(detail.longitude) : '',
+      thumbnailUrl: imageUrls[0] ?? '',
+      imageUrls,
+      isActive: !!detail.isActive,
+      isFeatured: !!detail.isFeatured,
+      brandName: detail.brandName ?? '',
     });
   };
 
@@ -457,7 +477,7 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
                     )}
                     <div className="mt-auto pt-4 flex items-center gap-2">
                       <button
-                        onClick={() => openEdit(p)}
+                        onClick={() => void openEdit(p)}
                         className="flex-1 px-3 py-2 text-sm font-medium text-[#D24A15] bg-orange-50 hover:bg-orange-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <Edit className="w-4 h-4" /> Sửa
@@ -709,11 +729,12 @@ function PropertyFormModal({
             />
           </Field>
 
-          <Field label="Ảnh đại diện">
+          <Field label="Hình ảnh căn nhà">
             <ImageUploadField
-              value={form.thumbnailUrl ? [form.thumbnailUrl] : []}
-              onChange={(urls) => update({ thumbnailUrl: urls[0] ?? '' })}
-              hint="Ảnh sẽ hiển thị trong danh sách căn nhà và trang chi tiết."
+              multiple
+              value={form.imageUrls}
+              onChange={(urls) => update({ imageUrls: urls, thumbnailUrl: urls[0] ?? '' })}
+              hint="Có thể thêm nhiều ảnh. Ảnh đầu tiên được dùng làm ảnh đại diện; dùng nút mũi tên để đổi thứ tự."
             />
           </Field>
 
