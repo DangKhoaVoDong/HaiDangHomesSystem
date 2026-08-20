@@ -377,3 +377,8 @@ export const amenitiesApi = {
   getById: (id: string, language?: string) =>
     api.get<ApiResponse<any>>(`/amenities/${id}`, { params: { language } }),
 };
+
+export const analyticsApi = {
+  getReport: (year: number, month: number) =>
+    api.get<ApiResponse<any>>('/analytics', { params: { year, month } }),
+};
