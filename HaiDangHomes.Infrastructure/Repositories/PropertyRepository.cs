@@ -25,9 +25,14 @@ public class PropertyRepository : IPropertyRepository
             .Include(p => p.Host)
             .Include(p => p.Category)
             .Include(p => p.Rooms)
+                .ThenInclude(r => r.Images)
+            .Include(p => p.Rooms)
+                .ThenInclude(r => r.RoomAmenities)
+                    .ThenInclude(ra => ra.Amenity)
             .Include(p => p.Images)
             .Include(p => p.Amenities)
                 .ThenInclude(pa => pa.Amenity)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 

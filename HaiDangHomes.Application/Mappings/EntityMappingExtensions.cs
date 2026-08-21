@@ -91,7 +91,7 @@ public static class EntityMappingExtensions
             room.TotalUnits,
             room.IsActive,
             room.IsAvailable,
-            room.Images?.Select(i => i.ToDto()).ToList() ?? new List<RoomImageDto>(),
+            room.Images?.OrderBy(i => i.DisplayOrder).Select(i => i.ToDto()).ToList() ?? new List<RoomImageDto>(),
             room.RoomAmenities?.Select(ra => ra.Amenity.ToDto(language)).ToList() ?? new List<AmenityDto>());
     }
 
@@ -120,7 +120,7 @@ public static class EntityMappingExtensions
             : new List<AmenityDto>();
 
         var imageList = room.Images != null
-            ? room.Images.Select(i => i.ToDto()).ToList()
+            ? room.Images.OrderBy(i => i.DisplayOrder).Select(i => i.ToDto()).ToList()
             : new List<RoomImageDto>();
 
         return new RoomManagementDto(

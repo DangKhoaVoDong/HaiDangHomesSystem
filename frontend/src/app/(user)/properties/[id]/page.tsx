@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -26,6 +26,7 @@ export default function PropertyDetailPage() {
   const [guests, setGuests] = useState(2);
   const [roomModal, setRoomModal] = useState<any>(null);
   const [imageIndex, setImageIndex] = useState(0);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number; title: string } | null>(null);
 
   const propertyQuery = useQuery({ queryKey: ['property', id], queryFn: () => propertiesApi.getById(id, { language: 'vi' }) });
   const roomsQuery = useQuery({ queryKey: ['property-rooms', id], queryFn: () => roomsApi.getByPropertyId(id, { language: 'vi' }) });
@@ -55,11 +56,32 @@ export default function PropertyDetailPage() {
     const images = [property?.thumbnailUrl, ...(property?.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean);
     return [...new Set(images)] as string[];
   }, [property]);
-  const roomImages = roomModal ? [roomModal.primaryImageUrl, ...(roomModal.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean) : [];
+  const roomImages = roomModal
+    ? [...new Set([roomModal.primaryImageUrl, ...(roomModal.images ?? []).map((x: any) => x.imageUrl)].filter(Boolean))] as string[]
+    : [];
   const latitude = Number(property?.latitude);
   const longitude = Number(property?.longitude);
   const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
   const fullAddress = [property?.address, property?.city].filter(Boolean).join(', ');
+
+  const openLightbox = (images: string[], index: number, title: string) => {
+    if (images.length > 0) setLightbox({ images, index, title });
+  };
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLightbox(null);
+      if (event.key === 'ArrowLeft') setLightbox(current => current ? ({ ...current, index: (current.index - 1 + current.images.length) % current.images.length }) : null);
+      if (event.key === 'ArrowRight') setLightbox(current => current ? ({ ...current, index: (current.index + 1) % current.images.length }) : null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [lightbox]);
 
   const goBooking = (room: any) => {
     const query = new URLSearchParams({ propertyId: id, checkIn, checkOut, guests: String(guests) });
@@ -78,12 +100,14 @@ export default function PropertyDetailPage() {
       </nav>
 
       <section className="grid h-[410px] grid-cols-1 gap-1 overflow-hidden rounded-lg md:grid-cols-2">
-        <img src={gallery[0]} alt={property.name} className="h-full w-full object-cover" />
+        <button type="button" onClick={() => openLightbox(gallery, 0, property.name)} className="h-full w-full cursor-zoom-in overflow-hidden bg-gray-100 text-left">
+          <img src={gallery[0]} alt={property.name} className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]" />
+        </button>
         <div className="hidden grid-cols-2 gap-1 md:grid">
-          {[1,2,3,4].map((n) => <div className="relative overflow-hidden" key={n}>
-            <img src={gallery[n] ?? gallery[0]} alt="" className="h-full w-full object-cover" />
+          {[1,2,3,4].map((n) => <button type="button" onClick={() => openLightbox(gallery, Math.min(n, Math.max(0, gallery.length - 1)), property.name)} className="relative cursor-zoom-in overflow-hidden bg-gray-100 text-left" key={n}>
+            <img src={gallery[n] ?? gallery[0]} alt={`${property.name} ${n + 1}`} className="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" />
             {n === 4 && <span className="absolute bottom-3 right-3 rounded bg-black/70 px-2 py-1 text-sm text-white"><ImageIcon className="mr-1 inline h-4 w-4" />{gallery.length} ảnh</span>}
-          </div>)}
+          </button>)}
         </div>
       </section>
 
@@ -164,6 +188,12 @@ export default function PropertyDetailPage() {
       {related.length > 0 && <section className="pb-12"><h2 className="mb-6 text-3xl font-semibold">Các chỗ nghỉ khác tại {property.city}</h2><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{related.map((p:any)=><Link href={`/properties/${p.id}`} key={p.id} className="overflow-hidden rounded-xl bg-white shadow-sm"><img src={p.thumbnailUrl} alt={p.name} className="h-44 w-full object-cover"/><div className="p-4"><h3 className="font-semibold">{p.name}</h3><p className="mt-2 line-clamp-2 text-sm text-gray-600">{p.address}</p><p className="mt-4 font-bold text-orange-600">{p.minPrice ? `Từ ${Number(p.minPrice).toLocaleString('vi-VN')}đ` : 'Liên hệ'}</p></div></Link>)}</div></section>}
     </div>
 
-    {roomModal && <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-0 sm:p-5" onClick={() => setRoomModal(null)}><div className="relative grid h-full w-full max-w-5xl overflow-hidden bg-white sm:h-auto sm:max-h-[90vh] sm:rounded-2xl md:grid-cols-[1.5fr_1fr]" onClick={e=>e.stopPropagation()}><button className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow" onClick={()=>setRoomModal(null)}><X/></button><div className="flex min-h-[340px] flex-col bg-black"><div className="relative flex-1"><img src={roomImages[imageIndex] || gallery[0]} className="h-full w-full object-cover" alt=""/><button onClick={()=>setImageIndex((imageIndex-1+roomImages.length)%roomImages.length)} className="absolute left-3 top-1/2 rounded-full bg-white p-2"><ChevronLeft/></button><button onClick={()=>setImageIndex((imageIndex+1)%roomImages.length)} className="absolute right-3 top-1/2 rounded-full bg-white p-2"><ChevronRight/></button></div><div className="flex gap-2 overflow-x-auto p-3">{roomImages.map((img:string,i:number)=><img key={img} onClick={()=>setImageIndex(i)} src={img} className={`h-16 w-24 shrink-0 rounded object-cover ${i===imageIndex?'ring-2 ring-orange-500':'opacity-60'}`} alt=""/>)}</div></div><div className="flex flex-col overflow-y-auto p-6"><h2 className="pr-8 text-2xl font-semibold">{roomModal.name}</h2><p className="my-5 text-sm leading-6 text-gray-700">{roomModal.description}</p><div className="space-y-3 border-y py-5"><p><Maximize className="mr-2 inline text-orange-500"/> {roomModal.sizeInSqm} m²</p><p><Bed className="mr-2 inline text-orange-500"/> {roomModal.bedCount} giường</p><p><Users className="mr-2 inline text-orange-500"/> {roomModal.maxOccupancy} người</p></div><h3 className="mt-5 font-semibold">Tiện nghi</h3><div className="mt-3 space-y-2 text-sm">{(roomModal.amenities ?? []).map((a:any)=><p key={a.id}>✓ {a.name}</p>)}</div><div className="mt-auto border-t pt-5"><strong className="text-2xl text-orange-600">{Number(roomModal.pricePerNight).toLocaleString('vi-VN')}đ</strong><span> / đêm</span><button onClick={()=>goBooking(roomModal)} className="mt-4 w-full rounded-full bg-orange-600 py-3 font-semibold text-white">Chọn phòng</button></div></div></div></div>}
+    {roomModal && <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-0 sm:p-5" onClick={() => setRoomModal(null)}><div className="relative grid h-full w-full max-w-5xl overflow-hidden bg-white sm:h-auto sm:max-h-[90vh] sm:rounded-2xl md:grid-cols-[1.5fr_1fr]" onClick={e=>e.stopPropagation()}><button className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow" onClick={()=>setRoomModal(null)}><X/></button><div className="flex min-h-[340px] flex-col bg-black"><div className="relative flex-1"><button type="button" onClick={() => openLightbox(roomImages.length ? roomImages : gallery, imageIndex, roomModal.name)} className="h-full w-full cursor-zoom-in"><img src={roomImages[imageIndex] || gallery[0]} className="h-full w-full object-cover" alt={`${roomModal.name} ${imageIndex + 1}`}/></button>{roomImages.length > 1 && <><button onClick={()=>setImageIndex((imageIndex-1+roomImages.length)%roomImages.length)} className="absolute left-3 top-1/2 rounded-full bg-white p-2"><ChevronLeft/></button><button onClick={()=>setImageIndex((imageIndex+1)%roomImages.length)} className="absolute right-3 top-1/2 rounded-full bg-white p-2"><ChevronRight/></button></>}</div>{roomImages.length > 0 && <div className="flex gap-2 overflow-x-auto p-3">{roomImages.map((img:string,i:number)=><img key={img} onClick={()=>setImageIndex(i)} src={img} className={`h-16 w-24 shrink-0 cursor-pointer rounded object-cover ${i===imageIndex?'ring-2 ring-orange-500':'opacity-60'}`} alt={`${roomModal.name} ${i+1}`}/>)}</div>}</div><div className="flex flex-col overflow-y-auto p-6"><h2 className="pr-8 text-2xl font-semibold">{roomModal.name}</h2><p className="my-5 text-sm leading-6 text-gray-700">{roomModal.description}</p><div className="space-y-3 border-y py-5"><p><Maximize className="mr-2 inline text-orange-500"/> {roomModal.sizeInSqm} m²</p><p><Bed className="mr-2 inline text-orange-500"/> {roomModal.bedCount} giường</p><p><Users className="mr-2 inline text-orange-500"/> {roomModal.maxOccupancy} người</p></div><h3 className="mt-5 font-semibold">Tiện nghi</h3><div className="mt-3 space-y-2 text-sm">{(roomModal.amenities ?? []).map((a:any)=><p key={a.id}>✓ {a.name}</p>)}</div><div className="mt-auto border-t pt-5"><strong className="text-2xl text-orange-600">{Number(roomModal.pricePerNight).toLocaleString('vi-VN')}đ</strong><span> / đêm</span><button onClick={()=>goBooking(roomModal)} className="mt-4 w-full rounded-full bg-orange-600 py-3 font-semibold text-white">Chọn phòng</button></div></div></div></div>}
+
+    {lightbox && <div className="fixed inset-0 z-[100] flex flex-col bg-black/95" onClick={() => setLightbox(null)}>
+      <div className="flex items-center justify-between px-4 py-3 text-white sm:px-6"><div><strong>{lightbox.title}</strong><span className="ml-3 text-sm text-white/70">{lightbox.index + 1} / {lightbox.images.length}</span></div><button type="button" aria-label="Đóng ảnh" className="rounded-full bg-white/10 p-2 hover:bg-white/20" onClick={() => setLightbox(null)}><X /></button></div>
+      <div className="relative min-h-0 flex-1 px-4 pb-3" onClick={e => e.stopPropagation()}><img src={lightbox.images[lightbox.index]} alt={`${lightbox.title} ${lightbox.index + 1}`} className="h-full w-full object-contain" />{lightbox.images.length > 1 && <><button type="button" aria-label="Ảnh trước" onClick={() => setLightbox(current => current ? ({...current,index:(current.index-1+current.images.length)%current.images.length}) : null)} className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-3 text-black shadow hover:bg-white sm:left-8"><ChevronLeft /></button><button type="button" aria-label="Ảnh tiếp theo" onClick={() => setLightbox(current => current ? ({...current,index:(current.index+1)%current.images.length}) : null)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-3 text-black shadow hover:bg-white sm:right-8"><ChevronRight /></button></>}</div>
+      {lightbox.images.length > 1 && <div className="flex justify-center gap-2 overflow-x-auto px-4 pb-4" onClick={e => e.stopPropagation()}>{lightbox.images.map((image,index)=><button type="button" key={image} onClick={() => setLightbox(current => current ? ({...current,index}) : null)} className={`h-16 w-24 shrink-0 overflow-hidden rounded ${index===lightbox.index?'ring-2 ring-orange-500':'opacity-55 hover:opacity-90'}`}><img src={image} alt="" className="h-full w-full object-cover" /></button>)}</div>}
+    </div>}
   </main>;
 }
