@@ -575,6 +575,9 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<int?>("ProvinceCode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ThumbnailUrl")
                         .HasColumnType("text");
 
@@ -589,6 +592,9 @@ namespace HaiDangHomes.API.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Ward")
                         .HasColumnType("text");
+
+                    b.Property<int?>("WardCode")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

@@ -24,11 +24,20 @@ import {
   MapPin,
   Power,
   ImageIcon,
+  Navigation,
+  AlertTriangle,
 } from 'lucide-react';
 import { propertiesApi, categoriesApi, brandsApi, getApiData, getApiError, isApiSuccess, BRANDS } from '@/lib/api';
 import ImageUploadField from '@/components/ImageUploadField';
 import { useAuthStore } from '@/stores/auth';
 import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
+import {
+  GeocodingResult,
+  getVietnamProvinces,
+  getVietnamWards,
+  isApproximateResult,
+  searchVietnamAddress,
+} from '@/lib/vietnam-location';
 
 const LocationPickerMap = dynamic(() => import('@/components/maps/LocationPickerMap'), {
   ssr: false,
@@ -49,8 +58,10 @@ interface PropertyForm {
   categoryId: string;
   address: string;
   city: string;
+  provinceCode: string;
   district: string;
   ward: string;
+  wardCode: string;
   latitude: string;
   longitude: string;
   thumbnailUrl: string;
@@ -66,8 +77,10 @@ const emptyForm: PropertyForm = {
   categoryId: '',
   address: '',
   city: '',
+  provinceCode: '',
   district: '',
   ward: '',
+  wardCode: '',
   latitude: '',
   longitude: '',
   thumbnailUrl: '',
@@ -130,8 +143,10 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
         categoryId: data.categoryId,
         address: data.address.trim(),
         city: data.city.trim() || undefined,
+        provinceCode: data.provinceCode ? Number(data.provinceCode) : undefined,
         district: data.district.trim() || undefined,
         ward: data.ward.trim() || undefined,
+        wardCode: data.wardCode ? Number(data.wardCode) : undefined,
         latitude: data.latitude ? parseFloat(data.latitude) : undefined,
         longitude: data.longitude ? parseFloat(data.longitude) : undefined,
         thumbnailUrl: data.imageUrls[0] || undefined,
@@ -170,8 +185,10 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
         categoryId: data.categoryId,
         address: data.address.trim(),
         city: data.city.trim() || undefined,
+        provinceCode: data.provinceCode ? Number(data.provinceCode) : undefined,
         district: data.district.trim() || undefined,
         ward: data.ward.trim() || undefined,
+        wardCode: data.wardCode ? Number(data.wardCode) : undefined,
         latitude: data.latitude ? parseFloat(data.latitude) : undefined,
         longitude: data.longitude ? parseFloat(data.longitude) : undefined,
         thumbnailUrl: data.imageUrls[0] || undefined,
@@ -223,8 +240,10 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
         categoryId: p.categoryId,
         address: p.address,
         city: p.city,
+        provinceCode: p.provinceCode,
         district: p.district,
         ward: p.ward,
+        wardCode: p.wardCode,
         latitude: p.latitude,
         longitude: p.longitude,
         thumbnailUrl: p.thumbnailUrl,
@@ -266,8 +285,10 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
       categoryId: detail.categoryId ?? '',
       address: detail.address ?? '',
       city: detail.city ?? '',
+      provinceCode: detail.provinceCode != null ? String(detail.provinceCode) : '',
       district: detail.district ?? '',
       ward: detail.ward ?? '',
+      wardCode: detail.wardCode != null ? String(detail.wardCode) : '',
       latitude: detail.latitude != null ? String(detail.latitude) : '',
       longitude: detail.longitude != null ? String(detail.longitude) : '',
       thumbnailUrl: imageUrls[0] ?? '',
@@ -281,6 +302,10 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
   const submit = (data: PropertyForm) => {
     if (!data.name.trim() || !data.address.trim() || !data.categoryId) {
       toast.error('Vui lòng nhập Tên, Địa chỉ và Loại hình');
+      return;
+    }
+    if ((!data.id || data.provinceCode) && (!data.provinceCode || !data.wardCode)) {
+      toast.error('Vui lòng chọn Tỉnh/Thành phố và Phường/Xã theo địa giới mới');
       return;
     }
 
@@ -573,12 +598,90 @@ function PropertyFormModal({
   onSubmit: (data: PropertyForm) => void;
 }) {
   const [form, setForm] = useState<PropertyForm>(initial);
+  const [provinceCode, setProvinceCode] = useState(initial.provinceCode);
+  const [locationVerified, setLocationVerified] = useState(
+    Boolean(initial.latitude && initial.longitude)
+  );
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
+  const [geocodingError, setGeocodingError] = useState('');
 
   useEffect(() => {
     setForm(initial);
+    setProvinceCode(initial.provinceCode);
+    setLocationVerified(Boolean(initial.latitude && initial.longitude));
+    setGeocodingResults([]);
+    setGeocodingError('');
   }, [initial]);
 
   const update = (patch: Partial<PropertyForm>) => setForm((f) => ({ ...f, ...patch }));
+
+  const provincesQuery = useQuery({
+    queryKey: ['vietnam-administrative-provinces-v2'],
+    queryFn: ({ signal }) => getVietnamProvinces(signal),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
+  const wardsQuery = useQuery({
+    queryKey: ['vietnam-administrative-wards-v2', provinceCode],
+    queryFn: ({ signal }) => getVietnamWards(Number(provinceCode), signal),
+    enabled: Boolean(provinceCode),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
+  const markAddressChanged = (patch: Partial<PropertyForm>) => {
+    update(patch);
+    if (form.latitude && form.longitude) setLocationVerified(false);
+    setGeocodingResults([]);
+    setGeocodingError('');
+  };
+
+  const fullAddress = [form.address, form.ward, form.district, form.city, 'Việt Nam']
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(', ');
+
+  const findLocation = async () => {
+    if (!form.city.trim() || !form.ward.trim()) {
+      setGeocodingError('Vui lòng chọn Tỉnh/Thành phố và Phường/Xã trước.');
+      return;
+    }
+    setGeocoding(true);
+    setGeocodingError('');
+    setGeocodingResults([]);
+    try {
+      let results = await searchVietnamAddress(fullAddress);
+      if (results.length === 0) {
+        const fallbackAddress = [form.ward, form.district, form.city, 'Việt Nam']
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .join(', ');
+        results = await searchVietnamAddress(fallbackAddress);
+      }
+      setGeocodingResults(results);
+      if (results.length === 0) {
+        setGeocodingError('Không tìm thấy vị trí phù hợp. Bạn vẫn có thể đặt ghim trực tiếp trên bản đồ.');
+      }
+    } catch (error) {
+      setGeocodingError(error instanceof Error ? error.message : 'Không thể tìm vị trí lúc này.');
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const selectGeocodingResult = (result: GeocodingResult) => {
+    update({
+      latitude: Number(result.lat).toFixed(6),
+      longitude: Number(result.lon).toFixed(6),
+    });
+    setLocationVerified(true);
+    setGeocodingResults([]);
+    if (isApproximateResult(result)) {
+      setGeocodingError('Vị trí tìm được chỉ gần đúng theo đường hoặc phường/xã. Vui lòng kiểm tra và kéo ghim nếu cần.');
+    } else {
+      setGeocodingError('');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -662,38 +765,120 @@ function PropertyFormModal({
             <input
               type="text"
               value={form.address}
-              onChange={(e) => update({ address: e.target.value })}
-              placeholder="Số nhà, đường..."
+              onChange={(e) => markAddressChanged({ address: e.target.value })}
+              placeholder="Số nhà, tên đường"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15]"
             />
           </Field>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Thành phố">
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => update({ city: e.target.value })}
-                placeholder="Hội An"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Tỉnh/Thành phố *">
+              <select
+                value={provinceCode}
+                onChange={(e) => {
+                  const code = e.target.value;
+                  const province = provincesQuery.data?.find((item) => String(item.code) === code);
+                  setProvinceCode(code);
+                  markAddressChanged({ city: province?.name ?? '', provinceCode: code, ward: '', wardCode: '' });
+                }}
+                disabled={provincesQuery.isLoading || provincesQuery.isError}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15]"
-              />
+              >
+                <option value="">
+                  {provincesQuery.isLoading
+                    ? 'Đang tải...'
+                    : provincesQuery.isError
+                      ? 'Không tải được danh sách'
+                      : form.city && !provinceCode
+                        ? `Dữ liệu cũ: ${form.city}`
+                        : '-- Chọn tỉnh/thành phố --'}
+                </option>
+                {provincesQuery.data?.map((province) => (
+                  <option key={province.code} value={province.code}>{province.name}</option>
+                ))}
+              </select>
+              {form.city && !provinceCode && (
+                <p className="mt-1 text-xs text-gray-500">Địa chỉ cũ được giữ nguyên. Chỉ chọn lại khi bạn muốn chuyển sang địa giới mới.</p>
+              )}
             </Field>
-            <Field label="Quận/Huyện">
+            <Field label="Phường/Xã *">
+              {provinceCode ? (
+                <select
+                  value={form.wardCode}
+                  onChange={(e) => {
+                    const ward = wardsQuery.data?.find((item) => String(item.code) === e.target.value);
+                    markAddressChanged({ ward: ward?.name ?? '', wardCode: e.target.value });
+                  }}
+                  disabled={wardsQuery.isLoading || wardsQuery.isError}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15]"
+                >
+                  <option value="">
+                    {wardsQuery.isLoading ? 'Đang tải...' : wardsQuery.isError ? 'Không tải được danh sách' : '-- Chọn phường/xã --'}
+                  </option>
+                  {wardsQuery.data?.map((ward) => (
+                    <option key={ward.code} value={ward.code}>{ward.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={form.ward}
+                  onChange={(e) => markAddressChanged({ ward: e.target.value })}
+                  placeholder={form.city ? 'Dữ liệu phường/xã cũ' : 'Chọn tỉnh/thành phố trước'}
+                  disabled={!form.city}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15] disabled:bg-gray-50"
+                />
+              )}
+            </Field>
+          </div>
+
+          <Field label="Quận/Huyện cũ (không bắt buộc)">
               <input
                 type="text"
                 value={form.district}
-                onChange={(e) => update({ district: e.target.value })}
+                onChange={(e) => markAddressChanged({ district: e.target.value })}
+                placeholder="Nhập thủ công nếu địa chỉ cần thông tin quận/huyện cũ"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15]"
               />
-            </Field>
-            <Field label="Phường/Xã">
-              <input
-                type="text"
-                value={form.ward}
-                onChange={(e) => update({ ward: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#D24A15]"
-              />
-            </Field>
+          </Field>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Tìm tọa độ từ địa chỉ</p>
+                <p className="mt-1 text-xs text-gray-500">{fullAddress || 'Nhập địa chỉ để bắt đầu tìm kiếm.'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={findLocation}
+                disabled={geocoding || !form.city.trim() || !form.ward.trim()}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#D24A15] px-4 py-2 text-sm font-medium text-white hover:bg-[#b83f11] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {geocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                Tìm vị trí trên bản đồ
+              </button>
+            </div>
+            {geocodingError && (
+              <p className="mt-3 flex items-start gap-2 text-xs text-amber-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {geocodingError}
+              </p>
+            )}
+            {geocodingResults.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-medium text-gray-700">Chọn một kết quả phù hợp:</p>
+                {geocodingResults.map((result) => (
+                  <button
+                    key={result.place_id}
+                    type="button"
+                    onClick={() => selectGeocodingResult(result)}
+                    className="block w-full rounded-lg border border-gray-200 bg-white p-3 text-left text-sm text-gray-700 hover:border-[#D24A15] hover:bg-orange-50"
+                  >
+                    <span className="font-medium">{result.display_name}</span>
+                    {isApproximateResult(result) && <span className="mt-1 block text-xs text-amber-600">Vị trí gần đúng</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -723,9 +908,11 @@ function PropertyFormModal({
             <LocationPickerMap
               latitude={form.latitude && Number.isFinite(Number(form.latitude)) ? Number(form.latitude) : undefined}
               longitude={form.longitude && Number.isFinite(Number(form.longitude)) ? Number(form.longitude) : undefined}
-              onChange={(latitude, longitude) =>
-                update({ latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) })
-              }
+              verified={locationVerified}
+              onChange={(latitude, longitude) => {
+                update({ latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) });
+                setLocationVerified(true);
+              }}
             />
           </Field>
 

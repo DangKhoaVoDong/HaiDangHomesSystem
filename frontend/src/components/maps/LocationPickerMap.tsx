@@ -8,6 +8,7 @@ type LocationPickerMapProps = {
   latitude?: number;
   longitude?: number;
   onChange: (latitude: number, longitude: number) => void;
+  verified?: boolean;
 };
 
 const DEFAULT_POSITION: [number, number] = [16.047079, 108.20623];
@@ -30,8 +31,8 @@ function MapInteraction({
   const map = useMap();
 
   useEffect(() => {
-    map.setView(position, map.getZoom(), { animate: false });
-  }, [map, position]);
+    map.setView(position, hasPosition ? 16 : 6, { animate: false });
+  }, [hasPosition, map, position]);
 
   useMapEvents({
     click(event) {
@@ -54,7 +55,7 @@ function MapInteraction({
   ) : null;
 }
 
-export default function LocationPickerMap({ latitude, longitude, onChange }: LocationPickerMapProps) {
+export default function LocationPickerMap({ latitude, longitude, onChange, verified = false }: LocationPickerMapProps) {
   const hasPosition = Number.isFinite(latitude) && Number.isFinite(longitude);
   const position: [number, number] = hasPosition
     ? [latitude as number, longitude as number]
@@ -72,6 +73,13 @@ export default function LocationPickerMap({ latitude, longitude, onChange }: Loc
       <p className="mt-2 text-xs text-gray-500">
         Nhấn vào bản đồ hoặc kéo ghim để chọn chính xác vị trí căn nhà.
       </p>
+      {hasPosition && (
+        <p className={`mt-2 text-xs font-medium ${verified ? 'text-emerald-700' : 'text-amber-700'}`}>
+          {verified
+            ? '✓ Tọa độ đã được xác minh.'
+            : '⚠ Địa chỉ đã thay đổi hoặc tọa độ chưa được xác minh. Hãy tìm lại vị trí hoặc chỉnh ghim trên bản đồ.'}
+        </p>
+      )}
     </div>
   );
 }

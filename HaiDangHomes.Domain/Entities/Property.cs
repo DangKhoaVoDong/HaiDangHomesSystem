@@ -12,8 +12,10 @@ public class Property : AuditableEntityBase<Guid>
     public Guid CategoryId { get; set; }
     public string Address { get; set; } = string.Empty;
     public string? City { get; set; }
+    public int? ProvinceCode { get; set; }
     public string? District { get; set; }
     public string? Ward { get; set; }
+    public int? WardCode { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ThumbnailUrl { get; set; }

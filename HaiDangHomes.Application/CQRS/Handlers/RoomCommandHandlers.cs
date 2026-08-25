@@ -327,8 +327,10 @@ public class CreatePropertyCommandHandler : IRequestHandler<CreatePropertyComman
             Description = request.Description,
             Address = request.Address,
             City = request.City,
+            ProvinceCode = request.ProvinceCode,
             District = request.District,
             Ward = request.Ward,
+            WardCode = request.WardCode,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             ThumbnailUrl = imageUrls.FirstOrDefault(),
@@ -384,8 +386,10 @@ public class UpdatePropertyCommandHandler : IRequestHandler<UpdatePropertyComman
         property.CategoryId = request.CategoryId;
         property.Address = request.Address;
         property.City = request.City;
+        property.ProvinceCode = request.ProvinceCode;
         property.District = request.District;
         property.Ward = request.Ward;
+        property.WardCode = request.WardCode;
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
         var imageUrls = request.ImageUrls?
