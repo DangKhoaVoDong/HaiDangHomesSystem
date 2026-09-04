@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useLanguageStore } from '@/stores/language';
 import { User, Globe, LogOut, Settings, Calendar, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -39,9 +40,7 @@ export function Header() {
       <div className="max-w-[1600px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <span className="font-serif text-2xl text-white tracking-wider">
-            Haidang Home
-          </span>
+          <BrandLogo light priority className="h-11 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}

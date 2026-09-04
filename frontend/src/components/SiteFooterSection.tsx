@@ -1,3 +1,5 @@
+import { BrandLogo } from '@/components/BrandLogo';
+
 const footerLinks = [
   { label: 'Privacy Policy', href: '#' },
   { label: 'Terms of Service', href: '#' },
@@ -11,9 +13,7 @@ export const SiteFooterSection = () => {
     <footer className="full-width bg-[#1c1b1b] grid grid-cols-1 md:grid-cols-12 gap-6 px-5 sm:px-8 lg:px-16 py-10 sm:py-16 w-full">
       {/* Footer Brand */}
       <div className="md:col-span-12 mb-8">
-        <span className="font-display-lg text-[28px] tracking-widest uppercase text-white">
-          HAIDANG HOME
-        </span>
+        <BrandLogo light className="h-14 w-auto" />
       </div>
 
       {/* Footer Bottom */}

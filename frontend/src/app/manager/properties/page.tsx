@@ -31,6 +31,7 @@ import { propertiesApi, categoriesApi, brandsApi, getApiData, getApiError, isApi
 import ImageUploadField from '@/components/ImageUploadField';
 import { useAuthStore } from '@/stores/auth';
 import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
+import { BrandLogo } from '@/components/BrandLogo';
 import {
   GeocodingResult,
   getVietnamProvinces,
@@ -327,7 +328,7 @@ export function PropertyManagementView({ adminMode = false }: { adminMode?: bool
   const renderSidebar = () => (
     <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50">
       <div className="px-6 py-8 border-b border-gray-200">
-        <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDangHomes</h1>
+        <BrandLogo className="h-12 w-auto" />
         <p className="text-sm text-gray-500 mt-1">Luxury Manager</p>
       </div>
       <nav className="flex-1 py-6 px-4 space-y-1">

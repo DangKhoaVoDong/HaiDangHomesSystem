@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth';
 import { normalizeRole } from '@/lib/auth-shared';
 import { Menu, X, User, LogOut, Settings, Calendar, Globe } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const navigationItems = [
   { label: 'Đặt Phòng', href: '/properties' },
@@ -54,17 +55,7 @@ export const PrimaryNavigationSection = () => {
       <div className="flex justify-between items-center px-5 sm:px-8 lg:px-12 xl:px-16 py-3 w-full max-w-container-max mx-auto">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
-          <div className="w-10 h-10 rounded-full border border-primary flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full bg-primary"></div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-label-md text-label-md tracking-[0.2em] text-on-background uppercase">
-              HAIDANG HOME
-            </span>
-            <span className="text-[10px] tracking-[0.3em] text-on-surface-variant uppercase">
-              LIFESTYLE
-            </span>
-          </div>
+          <BrandLogo priority className="h-12 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}

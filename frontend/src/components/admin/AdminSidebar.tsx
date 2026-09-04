@@ -16,6 +16,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface NavItem {
   icon: typeof Bed;
@@ -44,9 +45,7 @@ export function AdminSidebar() {
     <>
       <div className="lg:hidden fixed inset-x-0 top-0 z-50 h-16 bg-white border-b border-gray-200 flex items-center gap-3 px-4">
         <Menu className="h-5 w-5 text-[#D24A15]" />
-        <Link href="/admin" className="font-serif text-lg font-bold text-[#D24A15]">
-          HaiDang Home
-        </Link>
+        <Link href="/admin"><BrandLogo className="h-8 w-auto" /></Link>
         <nav className="ml-auto flex items-center gap-1 overflow-x-auto">
           {PRIMARY_NAV.map((item) => (
             <Link
@@ -67,7 +66,7 @@ export function AdminSidebar() {
       </div>
       <aside className="hidden lg:flex h-screen w-64 fixed left-0 top-0 border-r border-gray-200 bg-white flex-col z-50">
       <div className="px-6 py-8 border-b border-gray-200">
-        <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDang Home</h1>
+        <BrandLogo className="h-12 w-auto" />
         <p className="text-sm text-gray-500 mt-1">Luxury Management</p>
       </div>
 

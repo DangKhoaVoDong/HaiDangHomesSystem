@@ -30,6 +30,7 @@ import { amenitiesApi, propertiesApi, roomsApi, getApiData, getApiError } from '
 import ImageUploadField from '@/components/ImageUploadField';
 import { useAuthStore } from '@/stores/auth';
 import { ManagerLogoutButton } from '@/components/manager/ManagerLogoutButton';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const navItems = [
   { icon: Building2, label: 'Quản lý căn nhà', active: false, href: '/manager/properties' },
@@ -247,7 +248,7 @@ export function CreateRoomView({ adminMode = false }: { adminMode?: boolean }) {
     <div className="min-h-screen bg-[#fcf9f8] flex">
       {!adminMode && <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex-col z-50 hidden lg:flex">
         <div className="px-6 py-8 border-b border-gray-200">
-          <h1 className="font-serif text-2xl font-bold text-[#D24A15]">HaiDangHomes</h1>
+          <BrandLogo className="h-12 w-auto" />
           <p className="text-sm text-gray-500 mt-1">Luxury Manager</p>
         </div>
 
