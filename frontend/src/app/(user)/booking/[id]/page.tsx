@@ -33,7 +33,23 @@ export default function BookingPage() {
   });
 
   const valid = useMemo(()=>form.fullName.trim() && /.+@.+\..+/.test(form.email) && form.phone.trim() && checkOut>checkIn && guests>0 && guests<=Number(room?.maxOccupancy||99),[form,checkIn,checkOut,guests,room]);
-  const submit=(e:FormEvent)=>{e.preventDefault();if(!valid){toast.error('Vui lòng kiểm tra đầy đủ thông tin');return}setStep(2)};
+  const submit=(e:FormEvent)=>{
+    e.preventDefault();
+    if(guests>Number(room?.maxOccupancy||0)){
+      toast.error(`Phòng này chỉ cho phép tối đa ${room?.maxOccupancy} khách`);
+      return;
+    }
+    if(!form.fullName.trim() || !/.+@.+\..+/.test(form.email) || !form.phone.trim()){
+      toast.error('Vui lòng kiểm tra đầy đủ thông tin liên hệ');
+      return;
+    }
+    if(checkOut<=checkIn){
+      toast.error('Ngày trả phòng phải sau ngày nhận phòng');
+      return;
+    }
+    if(!valid){toast.error('Vui lòng kiểm tra lại thông tin đặt phòng');return}
+    setStep(2);
+  };
 
   if(roomQuery.isLoading)return <div className="min-h-screen grid place-items-center">Đang tải...</div>;
   if(!room)return <div className="min-h-screen grid place-items-center">Không tìm thấy phòng.</div>;
@@ -48,7 +64,7 @@ export default function BookingPage() {
           {step===1 ? <><h2 className="text-xl font-semibold">Thông tin liên hệ</h2><p className="mt-1 text-sm text-gray-500">Thông tin được dùng để liên hệ về yêu cầu đặt phòng.</p><div className="mt-6 space-y-5"><Field label="Họ và tên *" value={form.fullName} onChange={v=>setForm({...form,fullName:v})}/><div className="grid gap-5 sm:grid-cols-2"><Field type="email" label="Địa chỉ email *" value={form.email} onChange={v=>setForm({...form,email:v})}/><Field type="tel" label="Số điện thoại *" value={form.phone} onChange={v=>setForm({...form,phone:v})}/></div><label className="block text-sm font-semibold">Yêu cầu đặc biệt hoặc Xuất hóa đơn VAT<textarea value={form.note} onChange={e=>setForm({...form,note:e.target.value})} rows={4} className="mt-2 w-full rounded-lg border p-3 font-normal outline-orange-500"/><small className="mt-1 block font-normal text-gray-500">Bạn sẽ biết tình trạng có sẵn của yêu cầu bổ sung trong quá trình nhận phòng. Có thể phát sinh phí bổ sung nhưng bạn vẫn có thể hủy yêu cầu sau đó.</small></label><button className="w-full rounded-full bg-orange-600 py-3 font-semibold text-white">Tiếp tục kiểm tra</button></div></>:
           <><h2 className="text-xl font-semibold">Kiểm tra thông tin</h2><div className="mt-5 divide-y rounded-xl border"><Review label="Họ và tên" value={form.fullName}/><Review label="Email" value={form.email}/><Review label="Số điện thoại" value={form.phone}/><Review label="Yêu cầu bổ sung" value={form.note||'Không có'}/><Review label="Thời gian" value={`${new Date(checkIn).toLocaleDateString('vi-VN')} – ${new Date(checkOut).toLocaleDateString('vi-VN')}`}/></div><div className="mt-6 flex gap-3"><button type="button" onClick={()=>setStep(1)} className="flex-1 rounded-full border py-3">Quay lại</button><button type="button" disabled={create.isPending} onClick={()=>create.mutate()} className="flex-1 rounded-full bg-orange-600 py-3 font-semibold text-white disabled:opacity-60">{create.isPending?'Đang gửi...':'Gửi yêu cầu đặt phòng'}</button></div></>}
         </form>
-        <aside className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-24"><div className="flex gap-3"><img src={room.images?.[0]?.imageUrl} alt="" className="h-24 w-24 rounded-lg object-cover"/><div><b>{room.propertyName}</b><p className="mt-1 text-sm text-gray-600">{room.name}</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 border-y py-5"><label className="text-xs text-gray-500"><CalendarDays className="mb-1 h-4 w-4"/>Nhận phòng<input type="date" min={today} value={checkIn} onChange={e=>setCheckIn(e.target.value)} className="mt-1 w-full text-sm text-black"/></label><label className="text-xs text-gray-500"><CalendarDays className="mb-1 h-4 w-4"/>Trả phòng<input type="date" min={checkIn} value={checkOut} onChange={e=>setCheckOut(e.target.value)} className="mt-1 w-full text-sm text-black"/></label></div><label className="mt-4 block text-xs text-gray-500"><Users className="mr-1 inline h-4 w-4"/>Số khách<input type="number" min={1} max={room.maxOccupancy} value={guests} onChange={e=>setGuests(Number(e.target.value))} className="ml-3 w-16 rounded border p-1 text-black"/></label><div className="mt-5 flex justify-between border-t pt-5"><span>Tổng tiền dự kiến<br/><small>{nights} đêm</small></span><b className="text-xl text-orange-600">{total.toLocaleString('vi-VN')} VND</b></div></aside>
+        <aside className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-24"><div className="flex gap-3"><img src={room.images?.[0]?.imageUrl} alt="" className="h-24 w-24 rounded-lg object-cover"/><div><b>{room.propertyName}</b><p className="mt-1 text-sm text-gray-600">{room.name}</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 border-y py-5"><label className="text-xs text-gray-500"><CalendarDays className="mb-1 h-4 w-4"/>Nhận phòng<input type="date" min={today} value={checkIn} onChange={e=>setCheckIn(e.target.value)} className="mt-1 w-full text-sm text-black"/></label><label className="text-xs text-gray-500"><CalendarDays className="mb-1 h-4 w-4"/>Trả phòng<input type="date" min={checkIn} value={checkOut} onChange={e=>setCheckOut(e.target.value)} className="mt-1 w-full text-sm text-black"/></label></div><label className="mt-4 block text-xs text-gray-500"><Users className="mr-1 inline h-4 w-4"/>Số khách <span>(tối đa {room.maxOccupancy})</span><input type="number" min={1} max={room.maxOccupancy} value={guests} onChange={e=>setGuests(Number(e.target.value))} className="ml-3 w-16 rounded border p-1 text-black"/></label>{guests>Number(room.maxOccupancy)&&<p className="mt-3 rounded-lg bg-orange-50 p-3 text-sm text-orange-700">Phòng này chỉ cho phép tối đa {room.maxOccupancy} khách. Vui lòng giảm số khách hoặc chọn phòng khác.</p>}<div className="mt-5 flex justify-between border-t pt-5"><span>Tổng tiền dự kiến<br/><small>{nights} đêm</small></span><b className="text-xl text-orange-600">{total.toLocaleString('vi-VN')} VND</b></div></aside>
       </div>}
     </div>
   </main>;

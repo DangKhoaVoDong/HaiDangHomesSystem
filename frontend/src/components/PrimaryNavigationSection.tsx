@@ -12,7 +12,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 const navigationItems = [
   { label: 'Đặt Phòng', href: '/properties' },
   { label: 'Về Chúng Tôi', href: '/about' },
-  { label: 'Khách Hàng Thân Thiết', href: '#' },
+  { label: 'Khách Hàng Thân Thiết', href: '/loyalty' },
 ];
 
 export const PrimaryNavigationSection = () => {
@@ -51,19 +51,19 @@ export const PrimaryNavigationSection = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-surface border-b border-outline-variant/30">
-      <div className="flex justify-between items-center px-5 sm:px-8 lg:px-12 xl:px-16 py-3 w-full max-w-container-max mx-auto">
+      <div className="flex items-center justify-between px-5 py-3 sm:px-8 lg:px-12 xl:mx-auto xl:grid xl:w-full xl:max-w-container-max xl:grid-cols-[240px_1fr_360px] xl:px-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <BrandLogo priority className="h-12 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden xl:flex items-center gap-6">
+        <nav className="mx-auto hidden w-full max-w-[560px] grid-cols-3 items-center xl:grid">
           {navigationItems.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className="text-on-surface-variant font-label-md hover:text-primary transition-colors duration-300"
+              className="px-3 text-center text-on-surface-variant font-label-md hover:text-primary transition-colors duration-300 whitespace-nowrap"
             >
               {item.label}
             </Link>
@@ -71,7 +71,7 @@ export const PrimaryNavigationSection = () => {
         </nav>
 
         {/* Right Actions */}
-        <div className="hidden xl:flex items-center gap-3">
+        <div className="hidden xl:flex items-center justify-end gap-3">
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
