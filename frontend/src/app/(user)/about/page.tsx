@@ -1,133 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight, Building2, HeartHandshake, MapPin, Sparkles } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 import { useLanguageStore } from '@/stores/language';
 
-const HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuARo4dBDtEAJh96XoFAq6slD6k8s2TklD2BxesXmyk6JjKKzCM8jij-7LzIM1BwGT0-2YCm7rwiz0qr6klLTUIix02lzyWoyUBkY48PO3_-6kbRCY_sYABsa_Zg2HcUOccIxmMzXx7j2RLj2ZwXkKJToBeYM-HHZb_lzN98Rq2KL1mvTF_NtyiRAedZGqGH5Cfc0HBHnw6B1OiVYbXLoOIEEorEV-Va02jFdtZrIYx42FgXLtGLUc1kbQ';
-const STORY_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1400&q=85';
-const DETAIL_IMAGE = 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=1200&q=85';
-
-const content = {
-  vi: {
-    chapter: 'CHƯƠNG 02 — CÂU CHUYỆN', eyebrow: 'VỀ HẢI ĐĂNG HOMES', heroTitle: 'Không gian để trở về.',
-    heroMeta: 'SỐNG CHẬM · CẢM NHẬN SÂU · LƯU GIỮ LÂU', storyLabel: '— CÂU CHUYỆN 001',
-    storyTitle: 'Mỗi nơi ở là một phần của hành trình.',
-    storyOne: 'Hai Đăng Homes bắt đầu từ một niềm tin giản dị: nơi lưu trú không chỉ là căn phòng để nghỉ, mà còn là nơi mỗi chuyến đi thực sự bắt đầu.',
-    storyTwo: 'Chúng tôi tìm kiếm những không gian có bản sắc, chăm chút từng chi tiết và kết nối bạn với nhịp sống riêng của mỗi điểm đến. Từ lúc tìm phòng đến khi rời đi, mọi trải nghiệm đều được giữ rõ ràng, gần gũi và vừa đủ.',
-    imageCaption: 'NHỮNG KHÔNG GIAN ĐƯỢC TUYỂN CHỌN BỞI HẢI ĐĂNG HOMES', statOne: 'Không gian được tuyển chọn',
-    statTwo: 'Đồng hành cùng khách hàng', statThree: 'Tận tâm trong từng trải nghiệm', valuesLabel: '— GIÁ TRỊ 002',
-    valuesTitle: 'Những điều chúng tôi luôn gìn giữ.',
-    values: [
-      ['01', 'Bản sắc', 'Mỗi không gian mang một câu chuyện riêng, hài hòa giữa tiện nghi hiện đại và tinh thần địa phương.'],
-      ['02', 'Chân thành', 'Sự hiếu khách bắt đầu từ việc lắng nghe, thấu hiểu và hỗ trợ đúng lúc.'],
-      ['03', 'Chỉn chu', 'Những chi tiết nhỏ được chăm chút để hành trình của bạn luôn nhẹ nhàng và trọn vẹn.'],
-    ],
-    promiseLabel: 'LỜI HỨA CỦA CHÚNG TÔI', promiseTitle: 'Ở trọn từng khoảnh khắc.',
-    promiseText: 'Dù là một kỳ nghỉ ngắn ngày, chuyến công tác hay hành trình bên gia đình, chúng tôi mong bạn luôn tìm thấy một nơi vừa vặn để dừng chân.',
-    cta: 'KHÁM PHÁ ĐIỂM LƯU TRÚ',
-  },
-  en: {
-    chapter: 'CHAPTER 02 — OUR STORY', eyebrow: 'ABOUT HAI DANG HOMES', heroTitle: 'A place to return to.',
-    heroMeta: 'LIVE SLOWLY · FEEL DEEPLY · REMEMBER LONGER', storyLabel: '— OUR STORY 001', storyTitle: 'Every stay is part of the journey.',
-    storyOne: 'Hai Dang Homes began with a simple belief: a stay is more than a room to rest in. It is where every journey truly begins.',
-    storyTwo: 'We seek spaces with character, care for every detail, and connect you with the distinct rhythm of each destination. From search to departure, every experience is kept clear, warm, and effortless.',
-    imageCaption: 'THOUGHTFULLY SELECTED SPACES BY HAI DANG HOMES', statOne: 'Thoughtfully selected spaces',
-    statTwo: 'Guest support whenever needed', statThree: 'Care in every experience', valuesLabel: '— OUR VALUES 002',
-    valuesTitle: 'The things we choose to preserve.',
-    values: [
-      ['01', 'Character', 'Every space carries its own story, blending modern comfort with a distinctive local spirit.'],
-      ['02', 'Sincerity', 'True hospitality begins with listening, understanding, and being there at the right time.'],
-      ['03', 'Thoughtfulness', 'Small details are carefully considered so your journey feels effortless and complete.'],
-    ],
-    promiseLabel: 'OUR PROMISE', promiseTitle: 'Be present for every moment.',
-    promiseText: 'Whether it is a short escape, a business trip, or time away with family, we hope you always find a place that feels just right.',
-    cta: 'EXPLORE OUR STAYS',
-  },
+const content={
+ vi:{eyebrow:'CÂU CHUYỆN HẢI ĐĂNG HOMES',title:'Một nơi ở đẹp, một hành trình đáng nhớ.',intro:'Hai Đăng Homes mang đến những không gian lưu trú ấm áp, chỉn chu và đậm dấu ấn địa phương — để mỗi chuyến đi đều nhẹ nhàng như trở về nhà.',discover:'Khám phá chỗ ở',storyEyebrow:'VỀ CHÚNG TÔI',storyTitle:'Được tạo nên từ tình yêu dành cho những chuyến đi.',storyOne:'Chúng tôi tin rằng nơi lưu trú không chỉ là một căn phòng. Đó là nơi bạn bắt đầu buổi sáng, trở về sau một ngày khám phá và lưu giữ những khoảnh khắc riêng của mình.',storyTwo:'Vì thế, từng không gian tại Hai Đăng Homes được lựa chọn cẩn thận, chăm chút trong từng chi tiết và vận hành bằng sự hiếu khách chân thành.',stats:[['Không gian','được tuyển chọn kỹ lưỡng'],['24/7','đồng hành cùng khách hàng'],['Tận tâm','trong từng trải nghiệm']],valueEyebrow:'ĐIỀU CHÚNG TÔI TRÂN TRỌNG',valueTitle:'Sự thoải mái bắt đầu từ những điều giản dị.',values:[['Không gian có bản sắc','Mỗi nơi ở đều có câu chuyện riêng, hài hòa giữa tiện nghi hiện đại và nét đẹp địa phương.'],['Chăm sóc bằng sự chân thành','Chúng tôi lắng nghe và hỗ trợ nhanh chóng để bạn luôn an tâm trong suốt kỳ nghỉ.'],['Trải nghiệm chỉn chu','Từ lúc tìm phòng đến khi trả phòng, mọi bước đều được thiết kế rõ ràng và thuận tiện.']],promise:'LỜI HỨA CỦA CHÚNG TÔI',promiseTitle:'Để bạn có thể ở trọn từng khoảnh khắc.',promiseText:'Dù là một chuyến nghỉ ngắn ngày, kỳ công tác hay hành trình cùng gia đình, Hai Đăng Homes luôn mong bạn tìm thấy một không gian vừa vặn với mình.',cta:'Tìm nơi ở phù hợp'},
+ en:{eyebrow:'THE HAI DANG HOMES STORY',title:'A beautiful stay, a journey to remember.',intro:'Hai Dang Homes offers warm, thoughtful spaces with a local soul — making every journey feel a little more like coming home.',discover:'Explore our stays',storyEyebrow:'ABOUT US',storyTitle:'Born from a love for meaningful journeys.',storyOne:'We believe a stay is more than a room. It is where mornings begin, where you return after a day of discovery, and where personal moments become memories.',storyTwo:'That is why every Hai Dang Homes space is carefully selected, thoughtfully detailed, and run with genuine hospitality.',stats:[['Spaces','thoughtfully selected'],['24/7','guest support'],['Heartfelt','in every experience']],valueEyebrow:'WHAT MATTERS TO US',valueTitle:'Comfort begins with the simple things.',values:[['Spaces with character','Every stay has its own story, balancing modern comfort with a distinct local spirit.'],['Genuine hospitality','We listen and respond quickly so you can feel at ease throughout your stay.'],['Thoughtful experiences','From search to checkout, every step is designed to be clear and effortless.']],promise:'OUR PROMISE',promiseTitle:'So you can be present for every moment.',promiseText:'Whether it is a weekend escape, a business trip, or time away with family, we hope you find a space that feels just right.',cta:'Find your perfect stay'}
 } as const;
+const valueIcons=[Building2,HeartHandshake,Sparkles];
 
-export default function AboutPage() {
-  const { language } = useLanguageStore();
-  const t = content[language];
-
-  return (
-    <div className="bg-white text-[#1c1b1b]">
-      <section className="relative flex min-h-[680px] items-end overflow-hidden sm:min-h-[760px] lg:min-h-[840px]">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${HERO_IMAGE}')` }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/30" />
-        <div className="absolute left-0 right-0 top-6 z-10 mx-auto flex w-full max-w-container-max justify-between gap-4 px-5 sm:top-10 sm:px-8 lg:px-16">
-          <span className="text-[10px] tracking-[0.3em] text-white/80">N 11°56&apos; — E 108°26&apos;</span>
-          <span className="text-right text-[10px] tracking-[0.3em] text-white/80">{t.chapter}</span>
-        </div>
-        <div className="relative z-10 mx-auto w-full max-w-container-max px-5 pb-16 text-center sm:px-8 sm:pb-20 lg:px-16 lg:pb-24">
-          <span className="mb-6 block text-[10px] tracking-[0.3em] text-white/90 sm:text-xs">— {t.eyebrow} —</span>
-          <h1 className="font-display-lg text-5xl italic leading-[1.05] text-white drop-shadow-lg sm:text-7xl lg:text-[104px]">{t.heroTitle}</h1>
-          <p className="mt-8 text-[10px] tracking-[0.28em] text-white/85 sm:text-xs">{t.heroMeta}</p>
-        </div>
-      </section>
-
-      <section className="px-5 py-20 sm:px-8 lg:px-16 lg:py-28">
-        <div className="mx-auto w-full max-w-screen-xl">
-          <div className="grid gap-8 md:grid-cols-12 md:gap-6">
-            <div className="md:col-span-7">
-              <p className="mb-4 text-xs tracking-[3px] text-[#D24A15]">{t.storyLabel}</p>
-              <h2 className="max-w-3xl font-serif text-4xl font-semibold leading-tight text-gray-900 sm:text-5xl lg:text-6xl">{t.storyTitle}</h2>
-            </div>
-            <div className="space-y-5 self-end text-sm leading-7 text-gray-600 md:col-span-5 lg:text-base lg:leading-8">
-              <p>{t.storyOne}</p><p>{t.storyTwo}</p>
-            </div>
-          </div>
-          <figure className="mt-14">
-            <div className="aspect-[16/8] min-h-[360px] overflow-hidden rounded-xl bg-gray-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={STORY_IMAGE} alt="Hai Dang Homes" className="h-full w-full object-cover" />
-            </div>
-            <figcaption className="mt-4 flex items-center justify-between gap-4 border-b border-[#e2bfb54c] pb-4 text-[9px] tracking-[1.8px] text-gray-500 sm:text-[10px]">
-              <span>{t.imageCaption}</span><span>EST. 2024</span>
-            </figcaption>
-          </figure>
-          <div className="mt-12 grid border-y border-[#e2bfb54c] sm:grid-cols-3">
-            {[["01", t.statOne], ["24/7", t.statTwo], ["100%", t.statThree]].map(([value, label], index) => (
-              <div key={label} className={`py-8 text-center sm:px-5 ${index > 0 ? 'border-t border-[#e2bfb54c] sm:border-l sm:border-t-0' : ''}`}>
-                <p className="font-serif text-4xl text-[#D24A15]">{value}</p><p className="mt-2 text-xs text-gray-600">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#fcf9f8] px-5 py-20 sm:px-8 lg:px-16 lg:py-28">
-        <div className="mx-auto grid w-full max-w-screen-xl gap-12 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-5">
-            <p className="mb-4 text-xs tracking-[3px] text-[#D24A15]">{t.valuesLabel}</p>
-            <h2 className="font-serif text-4xl font-semibold leading-tight text-gray-900 sm:text-5xl">{t.valuesTitle}</h2>
-            <div className="mt-10 hidden aspect-[4/5] overflow-hidden rounded-xl bg-gray-100 lg:block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={DETAIL_IMAGE} alt="Không gian Hai Dang Homes" className="h-full w-full object-cover" />
-            </div>
-          </div>
-          <div className="border-t border-[#e2bfb54c] lg:col-span-6 lg:col-start-7 lg:self-center">
-            {t.values.map(([number, title, description]) => (
-              <article key={number} className="grid gap-4 border-b border-[#e2bfb54c] py-8 sm:grid-cols-[64px_1fr] sm:py-10">
-                <span className="text-xs tracking-[2px] text-[#D24A15]">{number}</span>
-                <div><h3 className="font-serif text-2xl text-gray-900 sm:text-3xl">{title}</h3><p className="mt-3 max-w-xl text-sm leading-7 text-gray-600">{description}</p></div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#1c1b1b] px-5 py-20 text-white sm:px-8 lg:px-16 lg:py-28">
-        <div className="mx-auto grid w-full max-w-screen-xl items-end gap-10 md:grid-cols-12">
-          <div className="md:col-span-8">
-            <p className="mb-5 text-xs tracking-[3px] text-[#ffb59d]">— {t.promiseLabel}</p>
-            <h2 className="font-serif text-4xl leading-tight sm:text-5xl lg:text-6xl">{t.promiseTitle}</h2>
-            <p className="mt-6 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">{t.promiseText}</p>
-          </div>
-          <div className="md:col-span-4 md:text-right">
-            <Link href="/properties" className="inline-block rounded-full bg-[#D24A15] px-7 py-3.5 text-[11px] font-semibold tracking-[1.2px] text-white transition-colors hover:bg-[#b03d10]">{t.cta} →</Link>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+export default function AboutPage(){const {language}=useLanguageStore();const t=content[language];return <div className="overflow-hidden bg-[#fcf9f8] text-on-surface">
+ <section className="relative min-h-[650px] border-b border-outline-variant/30 px-5 py-20 sm:px-8 lg:px-16 lg:py-28"><div className="absolute -right-40 -top-48 h-[620px] w-[620px] rounded-full bg-primary-fixed/70 blur-3xl"/><div className="absolute -bottom-48 -left-52 h-[520px] w-[520px] rounded-full border-[90px] border-[#f0dfd8]/70"/><div className="relative mx-auto grid max-w-[1440px] items-center gap-16 lg:grid-cols-[1.1fr_.9fr]"><div className="max-w-3xl"><p className="mb-6 text-xs font-semibold tracking-[.25em] text-primary sm:text-sm">{t.eyebrow}</p><h1 className="max-w-4xl text-5xl leading-[1.08] sm:text-6xl lg:text-7xl xl:text-[84px]">{t.title}</h1><p className="mt-8 max-w-2xl text-base leading-8 text-on-surface-variant sm:text-lg">{t.intro}</p><Link href="/properties" className="mt-10 inline-flex items-center gap-3 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-white hover:bg-[#b83d0e]">{t.discover}<ArrowRight className="h-4 w-4"/></Link></div><div className="relative mx-auto hidden h-[430px] w-full max-w-[520px] lg:block" aria-hidden="true"><div className="absolute inset-x-12 top-2 h-[360px] rounded-[180px_180px_32px_32px] bg-[#d6b7a6] shadow-[0_30px_80px_rgba(86,55,43,.16)]"/><div className="absolute inset-x-[72px] top-[22px] h-[320px] overflow-hidden rounded-[160px_160px_22px_22px] bg-[#6f6559]"><div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#c8ddd9] to-[#efe2d3]"/><div className="absolute bottom-0 h-48 w-full bg-[#b47958] [clip-path:polygon(0_50%,25%_25%,43%_48%,68%_8%,100%_48%,100%_100%,0_100%)]"/><div className="absolute bottom-0 left-1/2 h-36 w-48 -translate-x-1/2 rounded-t-[90px] bg-[#f4eee8]"/><div className="absolute bottom-0 left-1/2 h-24 w-24 -translate-x-1/2 rounded-t-[48px] bg-[#4d3429]"/></div><div className="absolute bottom-0 left-0 rounded-2xl bg-white p-5 shadow-xl"><BrandLogo className="h-10 w-auto"/><div className="mt-3 flex items-center gap-2 text-xs text-on-surface-variant"><MapPin className="h-4 w-4 text-primary"/>Không gian để trở về</div></div></div></div></section>
+ <section className="px-5 py-20 sm:px-8 lg:px-16 lg:py-28"><div className="mx-auto grid max-w-[1440px] gap-12 lg:grid-cols-2 lg:gap-24"><div><p className="text-xs font-semibold tracking-[.24em] text-primary">{t.storyEyebrow}</p><h2 className="mt-5 max-w-xl text-4xl leading-tight sm:text-5xl">{t.storyTitle}</h2></div><div className="space-y-5 text-base leading-8 text-on-surface-variant sm:text-lg"><p>{t.storyOne}</p><p>{t.storyTwo}</p></div></div><div className="mx-auto mt-20 grid max-w-[1440px] border-y border-outline-variant/40 sm:grid-cols-3">{t.stats.map(([v,l],i)=><div key={v} className={`px-5 py-9 text-center ${i>0?'border-t border-outline-variant/40 sm:border-l sm:border-t-0':''}`}><p className="font-headline-md text-3xl text-primary sm:text-4xl">{v}</p><p className="mt-2 text-sm text-on-surface-variant">{l}</p></div>)}</div></section>
+ <section className="bg-[#f3ece8] px-5 py-20 sm:px-8 lg:px-16 lg:py-28"><div className="mx-auto max-w-[1440px]"><div className="max-w-3xl"><p className="text-xs font-semibold tracking-[.24em] text-primary">{t.valueEyebrow}</p><h2 className="mt-5 text-4xl leading-tight sm:text-5xl">{t.valueTitle}</h2></div><div className="mt-14 grid gap-5 md:grid-cols-3">{t.values.map(([title,description],i)=>{const Icon=valueIcons[i];return <article key={title} className="rounded-3xl border border-white/70 bg-white/75 p-7 shadow-[0_16px_50px_rgba(70,43,31,.06)] sm:p-9"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon className="h-5 w-5"/></span><h3 className="mt-8 text-2xl">{title}</h3><p className="mt-4 text-sm leading-7 text-on-surface-variant">{description}</p></article>})}</div></div></section>
+ <section className="px-5 py-20 sm:px-8 lg:px-16 lg:py-28"><div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[32px] bg-[#28211e] px-6 py-16 text-center text-white sm:px-12 lg:py-24"><div className="absolute -right-20 -top-32 h-80 w-80 rounded-full border-[70px] border-white/5"/><div className="relative mx-auto max-w-3xl"><p className="text-xs font-semibold tracking-[.24em] text-[#ffb59d]">{t.promise}</p><h2 className="mt-5 text-4xl sm:text-5xl">{t.promiseTitle}</h2><p className="mx-auto mt-6 max-w-2xl leading-8 text-white/70">{t.promiseText}</p><Link href="/properties" className="mt-9 inline-flex items-center gap-3 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold">{t.cta}<ArrowRight className="h-4 w-4"/></Link></div></div></section>
+ </div>}
