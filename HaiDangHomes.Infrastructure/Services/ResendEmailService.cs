@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Resend;
 using HaiDangHomes.Domain.Interfaces;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace HaiDangHomes.Infrastructure.Services;
@@ -13,11 +14,17 @@ public class ResendEmailService : IEmailService
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly string _apiKey;
     private readonly string _fromEmail;
+    private readonly string _adminNotificationEmail;
     private readonly string _companyName;
     private readonly ILogger<ResendEmailService> _logger;
     private readonly bool _devMode;
 
-    public ResendEmailService(string apiKey, string fromEmail, string companyName, ILogger<ResendEmailService> logger)
+    public ResendEmailService(
+        string apiKey,
+        string fromEmail,
+        string adminNotificationEmail,
+        string companyName,
+        ILogger<ResendEmailService> logger)
     {
         // Dev fallback: skip Resend API call and log content locally when key is missing/invalid.
         _devMode = string.IsNullOrWhiteSpace(apiKey)
@@ -26,13 +33,18 @@ public class ResendEmailService : IEmailService
                    || apiKey.Contains("YOUR_RESEND_KEY", StringComparison.OrdinalIgnoreCase);
         _apiKey = apiKey.Trim();
         _fromEmail = _devMode ? fromEmail.Trim() : NormalizeEmailAddress(fromEmail);
+        _adminNotificationEmail = string.IsNullOrWhiteSpace(adminNotificationEmail)
+            || adminNotificationEmail.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : NormalizeEmailAddress(adminNotificationEmail);
         _companyName = companyName;
         _logger = logger;
 
         _logger.LogInformation(
-            "Resend email service configured. Enabled={Enabled}, From={From}",
+            "Resend email service configured. Enabled={Enabled}, From={From}, AdminNotifications={AdminNotifications}",
             !_devMode,
-            _fromEmail);
+            _fromEmail,
+            !string.IsNullOrWhiteSpace(_adminNotificationEmail));
     }
 
     private IResend GetClient() => ResendClient.Create(_apiKey);
@@ -259,6 +271,71 @@ public class ResendEmailService : IEmailService
             HtmlBody = htmlContent
         };
         email.To.Add(toEmail);
+
+        await SendAsync(email, cancellationToken);
+    }
+
+    public async Task SendNewBookingNotificationAsync(
+        string guestName,
+        string guestEmail,
+        string guestPhone,
+        string bookingCode,
+        string roomName,
+        string propertyName,
+        DateTime checkIn,
+        DateTime checkOut,
+        decimal amount,
+        int numberOfGuests,
+        string? specialRequests,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_adminNotificationEmail))
+        {
+            _logger.LogWarning(
+                "Admin booking notification skipped for {BookingCode}: Resend:AdminNotificationEmail is not configured.",
+                bookingCode);
+            return;
+        }
+
+        var safeGuestName = WebUtility.HtmlEncode(guestName);
+        var safeGuestEmail = WebUtility.HtmlEncode(guestEmail);
+        var safeGuestPhone = WebUtility.HtmlEncode(guestPhone);
+        var safeBookingCode = WebUtility.HtmlEncode(bookingCode);
+        var safeRoomName = WebUtility.HtmlEncode(roomName);
+        var safePropertyName = WebUtility.HtmlEncode(propertyName);
+        var safeSpecialRequests = WebUtility.HtmlEncode(
+            string.IsNullOrWhiteSpace(specialRequests) ? "Không có" : specialRequests);
+
+        var htmlContent = $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<body style='font-family:Arial,sans-serif;line-height:1.6;color:#333'>
+  <div style='max-width:640px;margin:auto;padding:20px'>
+    <h2 style='color:#c2410c'>Có yêu cầu đặt phòng mới</h2>
+    <p>Một khách hàng vừa gửi yêu cầu đặt phòng trên hệ thống.</p>
+    <table style='width:100%;border-collapse:collapse'>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Mã đặt phòng</td><td style='padding:8px;border-bottom:1px solid #eee'><strong>{safeBookingCode}</strong></td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Khách hàng</td><td style='padding:8px;border-bottom:1px solid #eee'>{safeGuestName}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Email</td><td style='padding:8px;border-bottom:1px solid #eee'>{safeGuestEmail}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Số điện thoại</td><td style='padding:8px;border-bottom:1px solid #eee'>{safeGuestPhone}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Cơ sở / Phòng</td><td style='padding:8px;border-bottom:1px solid #eee'>{safePropertyName} / {safeRoomName}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Thời gian</td><td style='padding:8px;border-bottom:1px solid #eee'>{checkIn:dd/MM/yyyy} - {checkOut:dd/MM/yyyy}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Số khách</td><td style='padding:8px;border-bottom:1px solid #eee'>{numberOfGuests}</td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Chi phí dự kiến</td><td style='padding:8px;border-bottom:1px solid #eee'><strong>{amount:N0} VND</strong></td></tr>
+      <tr><td style='padding:8px;border-bottom:1px solid #eee'>Yêu cầu thêm</td><td style='padding:8px;border-bottom:1px solid #eee'>{safeSpecialRequests}</td></tr>
+    </table>
+    <p>Vui lòng đăng nhập trang quản trị để kiểm tra và xử lý yêu cầu.</p>
+  </div>
+</body>
+</html>";
+
+        var email = new EmailMessage
+        {
+            From = _fromEmail,
+            Subject = $"[Đặt phòng mới] {bookingCode}",
+            HtmlBody = htmlContent
+        };
+        email.To.Add(_adminNotificationEmail);
 
         await SendAsync(email, cancellationToken);
     }

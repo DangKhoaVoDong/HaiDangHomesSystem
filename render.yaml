@@ -39,6 +39,8 @@ services:
         sync: false
       - key: Resend__FromEmail
         value: noreply@yourdomain.com
+      - key: Resend__AdminNotificationEmail
+        sync: false
 
       - key: App__CompanyName
         value: HaiDang Homes

@@ -214,6 +214,29 @@ public class BookingService : IBookingService
             }
         }
 
+        // Send a separate internal notification. A failure here must not affect
+        // the guest email or the booking that has already been committed.
+        try
+        {
+            await _emailService.SendNewBookingNotificationAsync(
+                guestName ?? "Khách hàng",
+                guestEmailToSend ?? guestEmail ?? "Không cung cấp",
+                guestPhone ?? "Không cung cấp",
+                bookingCode,
+                room.Name,
+                property?.Name ?? "",
+                checkIn,
+                checkOut,
+                priceResult.FinalPrice,
+                guests,
+                specialRequests);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"Failed to send admin notification for booking {bookingCode}: {ex}");
+        }
+
         return new BookingResult(
             true,
             booking,

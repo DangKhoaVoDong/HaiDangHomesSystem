@@ -13,7 +13,6 @@ const navigationItems = [
   { label: 'Đặt Phòng', href: '/properties' },
   { label: 'Về Chúng Tôi', href: '/about' },
   { label: 'Khách Hàng Thân Thiết', href: '#' },
-  { label: 'Dịch Vụ Doanh Nghiệp', href: '#' },
 ];
 
 export const PrimaryNavigationSection = () => {

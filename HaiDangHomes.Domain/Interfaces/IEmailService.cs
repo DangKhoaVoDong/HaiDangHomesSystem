@@ -26,6 +26,20 @@ public interface IEmailService
         decimal amount,
         int numberOfGuests,
         CancellationToken cancellationToken = default);
+
+    Task SendNewBookingNotificationAsync(
+        string guestName,
+        string guestEmail,
+        string guestPhone,
+        string bookingCode,
+        string roomName,
+        string propertyName,
+        DateTime checkIn,
+        DateTime checkOut,
+        decimal amount,
+        int numberOfGuests,
+        string? specialRequests,
+        CancellationToken cancellationToken = default);
         
     Task SendPasswordResetAsync(
         string toEmail,

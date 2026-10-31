@@ -84,9 +84,10 @@ public static class DependencyInjection
         {
             var apiKey = configuration["Resend:ApiKey"] ?? "";
             var fromEmail = configuration["Resend:FromEmail"] ?? "noreply@haidanghomes.com";
+            var adminEmail = configuration["Resend:AdminNotificationEmail"] ?? "";
             var companyName = configuration["App:CompanyName"] ?? "HaiDang Homes";
             var logger = sp.GetRequiredService<ILogger<ResendEmailService>>();
-            return new ResendEmailService(apiKey, fromEmail, companyName, logger);
+            return new ResendEmailService(apiKey, fromEmail, adminEmail, companyName, logger);
         });
 
         // QR Code
